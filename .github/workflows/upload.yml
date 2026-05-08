@@ -1,0 +1,53 @@
+name: YouTube Shorts Auto Upload
+
+on:
+  schedule:
+    - cron: '30 3 * * *'   # 9:00 AM IST (UTC+5:30)
+    - cron: '30 15 * * *'  # 9:00 PM IST
+  workflow_dispatch:        # Manual trigger from GitHub UI anytime
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Needed to commit analytics back to repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system packages (ffmpeg + fonts)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write credentials from GitHub Secrets
+        run: |
+          printf '%s\n' \
+            "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" \
+            "PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}" \
+            "CONTENT_NICHE=Hindi entertainment - funny, prank, facts, science, kids, illusion" \
+            "TTS_VOICE=hi-IN-MadhurNeural" \
+            "UPLOAD_TIMES=09:00,21:00" > .env
+          echo '${{ secrets.YOUTUBE_TOKEN_JSON }}' > token.json
+
+      - name: Run pipeline
+        run: python main.py
+
+      - name: Save analytics back to repo
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add video_history.json category_weights.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "chore: update video analytics [skip ci]"
+          git push || true

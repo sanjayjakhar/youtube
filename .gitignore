@@ -1,0 +1,10 @@
+.env
+token.json
+client_secrets.json
+output/
+logs/
+__pycache__/
+*.pyc
+*.pyo
+*.temp.aac
+temp_audio.aac
