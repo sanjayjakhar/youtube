@@ -275,3 +275,137 @@ def build_video(
                     obj.close()
                 except Exception:
                     pass
+
+
+# ── Scene image helpers ───────────────────────────────────────────────────────
+
+def _load_scene_frame(img_path: str) -> np.ndarray:
+    """Load & center-crop an AI scene image to 1080×1920."""
+    pil_img = Image.open(img_path).convert("RGB")
+    w, h = pil_img.size
+    scale = max(VIDEO_WIDTH / w, VIDEO_HEIGHT / h)
+    new_w = int(round(w * scale))
+    new_h = int(round(h * scale))
+    pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
+    left = (new_w - VIDEO_WIDTH) // 2
+    top = (new_h - VIDEO_HEIGHT) // 2
+    pil_img = pil_img.crop((left, top, left + VIDEO_WIDTH, top + VIDEO_HEIGHT))
+    return np.array(pil_img)
+
+
+# ── Scene-slideshow video build ───────────────────────────────────────────────
+
+def build_video_from_scenes(
+    scene_image_paths: List[str],
+    audio_path: str,
+    captions: List[Dict],
+    output_path: str,
+    hook_text: str = "",
+) -> bool:
+    """
+    Build a YouTube Short using AI-generated cinematic scene images as a slideshow.
+    Images are evenly spaced across the audio duration.
+    Captions (per character, colored) overlay on top.
+    """
+    if not scene_image_paths:
+        logger.error("No scene images provided")
+        return False
+
+    audio = final = None
+    open_clips = []
+
+    try:
+        audio = AudioFileClip(audio_path)
+        duration = audio.duration
+
+        # Distribute scene images evenly across duration
+        n = len(scene_image_paths)
+        slice_dur = duration / n
+
+        bg_clips = []
+        for i, img_path in enumerate(scene_image_paths):
+            try:
+                frame = _load_scene_frame(img_path)
+            except Exception as e:
+                logger.warning(f"Skipping scene {i}: {e}")
+                continue
+            t_start = i * slice_dur
+            t_end = (i + 1) * slice_dur
+            clip = ImageClip(frame).set_start(t_start).set_end(t_end)
+            bg_clips.append(clip)
+            open_clips.append(clip)
+
+        if not bg_clips:
+            logger.error("All scene images failed to load")
+            return False
+
+        # Dark overlay — readability
+        overlay = (
+            ColorClip(size=(VIDEO_WIDTH, VIDEO_HEIGHT), color=[0, 0, 0])
+            .set_opacity(0.28)
+            .set_duration(duration)
+        )
+
+        # Caption clips (per character color)
+        caption_clips = []
+        for cap in captions:
+            start = cap["start"]
+            end = min(cap.get("end", start + 2), duration)
+            if start >= end:
+                continue
+            color = tuple(cap.get("color", (255, 230, 0, 255)))
+            char_name = cap.get("char", "")
+            emoji = cap.get("emoji", "")
+            img = _create_caption_image(cap["text"], color=color, char_name=char_name, emoji=emoji)
+            clip = (
+                ImageClip(img, ismask=False)
+                .set_start(start)
+                .set_end(end)
+                .set_position((0, CAPTION_Y_POSITION))
+            )
+            caption_clips.append(clip)
+            open_clips.append(clip)
+
+        # Hook text (red pill, top) for first 3.5 sec
+        if hook_text:
+            hook_clip = (
+                ImageClip(_create_hook_image(hook_text), ismask=False)
+                .set_start(0)
+                .set_end(min(3.5, duration))
+                .set_position((0, 100))
+            )
+            caption_clips.insert(0, hook_clip)
+            open_clips.append(hook_clip)
+
+        final = CompositeVideoClip(
+            bg_clips + [overlay] + caption_clips,
+            size=(VIDEO_WIDTH, VIDEO_HEIGHT),
+        )
+        final = final.set_audio(audio)
+        final.write_videofile(
+            output_path,
+            fps=VIDEO_FPS,
+            codec="libx264",
+            audio_codec="aac",
+            temp_audiofile=output_path + ".temp.aac",
+            remove_temp=True,
+            logger=None,
+            threads=4,
+        )
+        logger.info(f"Scene slideshow video built: {output_path}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Scene video build failed: {e}", exc_info=True)
+        return False
+
+    finally:
+        for c in open_clips:
+            try: c.close()
+            except Exception: pass
+        if audio:
+            try: audio.close()
+            except Exception: pass
+        if final:
+            try: final.close()
+            except Exception: pass

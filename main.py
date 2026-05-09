@@ -6,7 +6,8 @@ from config import OUTPUT_DIR, LOGS_DIR
 from agents.trend_finder import get_trending_topics
 from agents.script_writer import generate_video_content
 from agents.tts_engine import generate_multi_char_tts
-from agents.video_builder import search_pexels_video, download_video, build_video
+from agents.video_builder import search_pexels_video, download_video, build_video, build_video_from_scenes
+from agents.image_generator import generate_scene_images
 from agents.uploader import upload_video
 from agents.analytics import (
     pick_weighted_category,
@@ -80,30 +81,49 @@ def run_pipeline(category: str = None) -> bool:
 
     logger.info(f"      {len(captions)} caption chunks ready")
 
-    # 4. Stock footage
-    logger.info("[4/6] Pexels footage dhundh rahe hain...")
-    raw_video_path = str(work_dir / "raw_footage.mp4")
-    keywords = content.get("search_keywords", ["india street"])
-    video_url = search_pexels_video(keywords)
-
-    if not video_url:
-        logger.error("Footage nahi mila")
-        return False
-    if not download_video(video_url, raw_video_path):
-        logger.error("Download fail")
-        return False
+    # 4. AI cinematic scene images (Avengers, superheroes, actors in Indian settings)
+    logger.info("[4/6] AI cinematic scenes generate ho rahe hain (Pollinations.ai)...")
+    scene_images = generate_scene_images(
+        category=category,
+        chosen_topic=content.get("chosen_topic", ""),
+        work_dir=str(work_dir),
+        count=5,
+    )
 
     # 5. Build video
     logger.info("[5/6] Video build ho raha hai...")
     final_video_path = str(work_dir / "final_short.mp4")
-    if not build_video(
-        raw_video_path,
-        audio_path,
-        captions,
-        final_video_path,
-        hook_text=content.get("hook_text", ""),
-    ):
-        logger.error("Build fail")
+
+    video_built = False
+
+    if scene_images:
+        logger.info(f"      AI scene slideshow mode: {len(scene_images)} images")
+        video_built = build_video_from_scenes(
+            scene_image_paths=scene_images,
+            audio_path=audio_path,
+            captions=captions,
+            output_path=final_video_path,
+            hook_text=content.get("hook_text", ""),
+        )
+        if not video_built:
+            logger.warning("Scene video failed, trying Pexels fallback...")
+
+    if not video_built:
+        logger.info("      Pexels stock footage fallback...")
+        raw_video_path = str(work_dir / "raw_footage.mp4")
+        keywords = content.get("search_keywords", ["india street"])
+        video_url = search_pexels_video(keywords)
+        if video_url and download_video(video_url, raw_video_path):
+            video_built = build_video(
+                raw_video_path,
+                audio_path,
+                captions,
+                final_video_path,
+                hook_text=content.get("hook_text", ""),
+            )
+
+    if not video_built:
+        logger.error("Build fail — both scene and Pexels paths failed")
         return False
 
     # 6. Upload
