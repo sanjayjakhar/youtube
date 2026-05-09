@@ -516,30 +516,39 @@ def build_video_from_did_clips(
                 return c.set_start(start)
             return None
 
+        # Track D-ID clip playback offset per character (since clip = only that char's audio)
+        did_clip_offset = {char: 0.0 for char in did_video_clips}
+
         # Group captions into continuous segments by character
         i = 0
         while i < len(captions):
             cap = captions[i]
             char = cap.get("char", "")
             seg_start = cap["start"]
-            # Extend segment as long as same character
             j = i + 1
             while j < len(captions) and captions[j].get("char") == char:
                 j += 1
             seg_end = min(captions[j - 1].get("end", seg_start + 2), duration)
+            seg_dur = max(0.1, seg_end - seg_start)
 
             if char in did_video_clips:
                 vc = did_video_clips[char]
-                seg_dur = max(0.1, seg_end - seg_start)
-                # Loop D-ID clip if needed
-                if vc.duration < seg_dur:
-                    loops = int(seg_dur / vc.duration) + 2
+                offset = did_clip_offset[char]
+                clip_end = min(offset + seg_dur, vc.duration)
+                actual_dur = max(0.1, clip_end - offset)
+
+                if actual_dur < seg_dur and vc.duration > 0:
+                    # Loop: need more clip than available — restart
                     from moviepy.editor import concatenate_videoclips
+                    loops = int((seg_dur / vc.duration)) + 2
                     vc_looped = concatenate_videoclips([vc] * loops)
-                    clip = vc_looped.subclip(0, seg_dur).set_start(seg_start)
+                    clip = vc_looped.subclip(offset % vc.duration, (offset % vc.duration) + seg_dur)
                     open_clips.append(vc_looped)
                 else:
-                    clip = vc.subclip(0, seg_dur).set_start(seg_start)
+                    clip = vc.subclip(offset, offset + actual_dur)
+
+                did_clip_offset[char] = (offset + seg_dur) % max(vc.duration, 0.1)
+                clip = clip.set_start(seg_start)
                 clip = _resize_to_portrait(clip) if clip.size != (VIDEO_WIDTH, VIDEO_HEIGHT) else clip
                 bg_clips.append(clip)
                 open_clips.append(clip)

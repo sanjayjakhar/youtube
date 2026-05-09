@@ -384,6 +384,48 @@ def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
     return False
 
 
+# ── Per-character portrait prompts for D-ID lip sync ─────────────────────────
+_CHAR_PORTRAIT = {
+    "HULK":          "Hulk green face extreme close-up, powerful angry expression, dramatic studio lighting, no background clutter, cinematic portrait 9:16",
+    "IRON_MAN":      "Iron Man helmet close-up, glowing eyes, red gold suit, dramatic lighting, cinematic portrait 9:16",
+    "SPIDER_MAN":    "Spider-Man mask close-up, expressive pose, dramatic red blue suit, cinematic portrait 9:16",
+    "THOR":          "Thor face close-up, long blond hair, powerful expression, lightning in background, cinematic portrait 9:16",
+    "BLACK_PANTHER": "Black Panther mask close-up, vibranium suit, regal expression, purple glow, cinematic portrait 9:16",
+    "DEADPOOL":      "Deadpool red mask close-up, tilted head funny pose, chaotic energy, cinematic portrait 9:16",
+    "LOKI":          "Loki face close-up, horned helmet, cunning smirk, green gold outfit, cinematic portrait 9:16",
+    "SHAKTIMAN":     "Shaktiman Indian superhero face close-up, gold suit, heroic expression, cinematic portrait 9:16",
+    "REPORTER":      "Indian female news reporter close-up portrait, professional blazer, holding microphone, studio lighting, cinematic 9:16",
+    "REPORTER_M":    "Indian male news reporter close-up portrait, professional suit, holding microphone, studio lighting, cinematic 9:16",
+    "ANCHOR":        "Indian female TV anchor close-up portrait, professional makeup, confident expression, studio backdrop, cinematic 9:16",
+    "SCIENTIST":     "Indian male scientist close-up portrait, white lab coat, excited expression, lab background, cinematic 9:16",
+    "SCIENTIST_F":   "Indian female scientist close-up portrait, white lab coat, brilliant expression, lab background, cinematic 9:16",
+    "CHILD":         "Indian school child close-up portrait, school uniform, curious smile, bright eyes, cinematic 9:16",
+    "VILLAIN":       "Menacing villain face close-up, dark dramatic lighting, evil expression, cinematic portrait 9:16",
+    "PUBLIC":        "Ordinary Indian person face close-up, surprised expression, street background, cinematic portrait 9:16",
+    "CRICKETER":     "Indian cricketer face close-up, cricket jersey, passionate expression, stadium lights, cinematic portrait 9:16",
+    "CHEF":          "Indian chef face close-up portrait, white chef hat, proud expression, kitchen background, cinematic 9:16",
+    "TEACHER":       "Indian male teacher face close-up portrait, formal shirt, glasses, kind authoritative expression, blackboard background, cinematic 9:16",
+    "POLICE":        "Indian police officer face close-up portrait, uniform and cap, serious expression, cinematic 9:16",
+    "GHOST":         "Dramatic ghost face close-up, ethereal glowing pale face, dramatic dark background, cinematic portrait 9:16",
+    "ROBOT":         "Friendly robot face close-up, glowing eyes, metallic surface, cinematic portrait 9:16",
+    "DADI":          "Indian elderly grandmother face close-up portrait, traditional saree, wise kind expression, warm home background, cinematic 9:16",
+    "SHARMA_JI":     "Middle-aged Indian neighborhood uncle face close-up, nosy amused expression, colony background, cinematic portrait 9:16",
+    "NARRATOR":      "Professional Indian narrator face close-up, neutral expression, studio lighting, cinematic portrait 9:16",
+}
+
+
+def generate_character_portrait(char_name: str, work_dir: str, seed: int = 12345) -> str:
+    """Generate a single close-up portrait image of one character for D-ID lip sync.
+    Returns the image path on success, empty string on failure."""
+    prompt = _CHAR_PORTRAIT.get(char_name, f"{char_name} face close-up portrait, dramatic lighting, cinematic 9:16")
+    out_path = os.path.join(work_dir, f"portrait_{char_name}.jpg")
+    if _download_image(prompt, out_path, seed=seed):
+        logger.info(f"Portrait generated: {char_name} → {out_path}")
+        return out_path
+    logger.warning(f"Portrait generation failed for {char_name}")
+    return ""
+
+
 def generate_scene_images(
     category: str,
     chosen_topic: str,

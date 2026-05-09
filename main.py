@@ -8,7 +8,7 @@ from agents.trend_finder import get_trending_topics
 from agents.script_writer import generate_video_content
 from agents.tts_engine import generate_multi_char_tts
 from agents.video_builder import search_pexels_video, download_video, build_video, build_video_from_scenes, build_video_from_did_clips
-from agents.image_generator import generate_scene_images
+from agents.image_generator import generate_scene_images, generate_character_portrait
 from agents.talking_face import generate_talking_clip
 from agents.uploader import upload_video
 from agents.analytics import (
@@ -97,28 +97,55 @@ def run_pipeline(category: str = None) -> bool:
 
     logger.info(f"      {len(captions)} caption chunks ready")
 
-    # 5. D-ID talking face clips (characters bolenge — mooh hilega)
+    # 5. D-ID talking face clips — portrait image + per-char audio → lip sync
     did_key = os.getenv("DID_API_KEY", "")
     did_clips = {}  # {"CHAR1": path, "CHAR2": path}
 
-    if did_key and scene_image_paths:
+    if did_key:
         logger.info("[5a/6] D-ID talking face generate ho raha hai...")
-        # Use first scene image for each character's face
         char_audio_dir = str(work_dir / "char_audio")
         os.makedirs(char_audio_dir, exist_ok=True)
 
-        # Build per-character combined audio + generate D-ID clip
-        for char_key, char_name in [("char1", char1), ("char2", char2)]:
-            # Collect all audio segments for this character
+        for char_name in [char1, char2]:
             char_lines = [cap for cap in captions if cap.get("char") == char_name]
             if not char_lines:
                 continue
-            char_face_img = scene_image_paths[0]  # use first scene image as face
-            char_audio_path = os.path.join(char_audio_dir, f"{char_name}_full.mp3")
-            char_clip_path = os.path.join(char_audio_dir, f"{char_name}_talking.mp4")
 
-            # Use the main combined audio (D-ID will use full video audio timing)
-            if generate_talking_clip(char_face_img, audio_path, char_clip_path, did_key):
+            # 1. Generate close-up portrait for this character
+            portrait_path = generate_character_portrait(
+                char_name, str(work_dir), seed=hash(char_name) % 99999
+            )
+            if not portrait_path:
+                logger.warning(f"Portrait failed for {char_name}, skipping D-ID")
+                continue
+
+            # 2. Extract just this character's audio lines from full narration
+            try:
+                from moviepy.editor import AudioFileClip, concatenate_audioclips
+                full_audio = AudioFileClip(audio_path)
+                segments = []
+                for cap in char_lines:
+                    s, e = cap["start"], min(cap["end"], full_audio.duration)
+                    if e > s:
+                        segments.append(full_audio.subclip(s, e))
+                if not segments:
+                    full_audio.close()
+                    continue
+                char_audio = concatenate_audioclips(segments)
+                char_audio_path = os.path.join(char_audio_dir, f"{char_name}_voice.mp3")
+                char_audio.write_audiofile(char_audio_path, fps=44100, logger=None)
+                char_audio.close()
+                full_audio.close()
+                for seg in segments:
+                    try: seg.close()
+                    except Exception: pass
+            except Exception as e:
+                logger.warning(f"Per-char audio extraction failed for {char_name}: {e}")
+                char_audio_path = audio_path  # fallback to full audio
+
+            # 3. Generate D-ID talking clip
+            char_clip_path = os.path.join(char_audio_dir, f"{char_name}_talking.mp4")
+            if generate_talking_clip(portrait_path, char_audio_path, char_clip_path, did_key):
                 did_clips[char_name] = char_clip_path
                 logger.info(f"D-ID clip ready: {char_name}")
             else:
