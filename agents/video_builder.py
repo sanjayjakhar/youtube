@@ -279,21 +279,80 @@ def build_video(
 
 # ── Scene image helpers ───────────────────────────────────────────────────────
 
-def _load_scene_frame(img_path: str) -> np.ndarray:
-    """Load & center-crop an AI scene image to 1080×1920."""
+def _load_scene_pil(img_path: str) -> Image.Image:
+    """Load scene image, upscale slightly for Ken Burns zoom headroom."""
     pil_img = Image.open(img_path).convert("RGB")
     w, h = pil_img.size
-    scale = max(VIDEO_WIDTH / w, VIDEO_HEIGHT / h)
+    # Scale to 120% so zoom-in doesn't reveal edges
+    scale = max(VIDEO_WIDTH * 1.20 / w, VIDEO_HEIGHT * 1.20 / h)
     new_w = int(round(w * scale))
     new_h = int(round(h * scale))
-    pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
-    left = (new_w - VIDEO_WIDTH) // 2
-    top = (new_h - VIDEO_HEIGHT) // 2
-    pil_img = pil_img.crop((left, top, left + VIDEO_WIDTH, top + VIDEO_HEIGHT))
-    return np.array(pil_img)
+    return pil_img.resize((new_w, new_h), Image.LANCZOS)
 
 
-# ── Scene-slideshow video build ───────────────────────────────────────────────
+def _make_ken_burns_clip(img_path: str, duration: float, direction: int = 0) -> Optional[object]:
+    """
+    Create a Ken Burns animated clip from a single image.
+    Applies slow zoom-in or pan so the character appears to move.
+    direction: 0=zoom-in-center, 1=pan-left-to-right, 2=pan-right-to-left, 3=zoom-out
+    """
+    try:
+        pil_img = _load_scene_pil(img_path)
+        big_w, big_h = pil_img.size
+        img_arr = np.array(pil_img)
+        fps = VIDEO_FPS
+        total_frames = max(1, int(duration * fps))
+
+        # Define start/end crop rectangles (x1,y1,x2,y2) in big image coords
+        cx = (big_w - VIDEO_WIDTH) / 2
+        cy = (big_h - VIDEO_HEIGHT) / 2
+
+        if direction == 0:   # zoom in toward center
+            s = (cx, cy, cx + VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+            zoom = 0.06
+            e = (cx + VIDEO_WIDTH * zoom / 2, cy + VIDEO_HEIGHT * zoom / 2,
+                 cx + VIDEO_WIDTH * (1 - zoom / 2), cy + VIDEO_HEIGHT * (1 - zoom / 2))
+        elif direction == 1:  # pan left → right
+            margin = min(big_w - VIDEO_WIDTH, int(VIDEO_WIDTH * 0.08))
+            s = (0, cy, VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+            e = (margin, cy, margin + VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+        elif direction == 2:  # pan right → left
+            margin = min(big_w - VIDEO_WIDTH, int(VIDEO_WIDTH * 0.08))
+            s = (margin, cy, margin + VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+            e = (0, cy, VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+        else:                 # zoom out from center
+            zoom = 0.06
+            s = (cx + VIDEO_WIDTH * zoom / 2, cy + VIDEO_HEIGHT * zoom / 2,
+                 cx + VIDEO_WIDTH * (1 - zoom / 2), cy + VIDEO_HEIGHT * (1 - zoom / 2))
+            e = (cx, cy, cx + VIDEO_WIDTH, cy + VIDEO_HEIGHT)
+
+        def make_frame(t):
+            progress = t / duration if duration > 0 else 0
+            x1 = s[0] + (e[0] - s[0]) * progress
+            y1 = s[1] + (e[1] - s[1]) * progress
+            x2 = s[2] + (e[2] - s[2]) * progress
+            y2 = s[3] + (e[3] - s[3]) * progress
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            # Clamp
+            x1 = max(0, min(x1, big_w - 1))
+            y1 = max(0, min(y1, big_h - 1))
+            x2 = max(x1 + 1, min(x2, big_w))
+            y2 = max(y1 + 1, min(y2, big_h))
+            crop = img_arr[y1:y2, x1:x2]
+            # Resize crop back to VIDEO_WIDTH x VIDEO_HEIGHT
+            from PIL import Image as PImage
+            resized = PImage.fromarray(crop).resize((VIDEO_WIDTH, VIDEO_HEIGHT), PImage.LANCZOS)
+            return np.array(resized)
+
+        from moviepy.editor import VideoClip
+        clip = VideoClip(make_frame, duration=duration)
+        return clip
+    except Exception as e:
+        logger.warning(f"Ken Burns failed for {img_path}: {e}")
+        return None
+
+
+# ── Scene-slideshow video build (with Ken Burns animation) ────────────────────
 
 def build_video_from_scenes(
     scene_image_paths: List[str],
@@ -303,9 +362,8 @@ def build_video_from_scenes(
     hook_text: str = "",
 ) -> bool:
     """
-    Build a YouTube Short using AI-generated cinematic scene images as a slideshow.
-    Images are evenly spaced across the audio duration.
-    Captions (per character, colored) overlay on top.
+    Build a YouTube Short: each scene image gets a Ken Burns animated clip
+    (slow zoom / pan), giving the illusion of camera movement.
     """
     if not scene_image_paths:
         logger.error("No scene images provided")
@@ -318,20 +376,17 @@ def build_video_from_scenes(
         audio = AudioFileClip(audio_path)
         duration = audio.duration
 
-        # Distribute scene images evenly across duration
         n = len(scene_image_paths)
         slice_dur = duration / n
 
         bg_clips = []
+        directions = [0, 1, 2, 3, 0]  # alternate directions per scene
         for i, img_path in enumerate(scene_image_paths):
-            try:
-                frame = _load_scene_frame(img_path)
-            except Exception as e:
-                logger.warning(f"Skipping scene {i}: {e}")
+            direction = directions[i % len(directions)]
+            clip = _make_ken_burns_clip(img_path, slice_dur, direction=direction)
+            if clip is None:
                 continue
-            t_start = i * slice_dur
-            t_end = (i + 1) * slice_dur
-            clip = ImageClip(frame).set_start(t_start).set_end(t_end)
+            clip = clip.set_start(i * slice_dur)
             bg_clips.append(clip)
             open_clips.append(clip)
 
