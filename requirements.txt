@@ -12,3 +12,4 @@ google-auth-httplib2>=0.1.1
 numpy>=1.24.0
 imageio>=2.31.0
 imageio-ffmpeg>=0.4.9
+pydub>=0.25.1

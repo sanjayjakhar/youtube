@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 import numpy as np
 import requests
@@ -35,14 +35,10 @@ _FONT_CANDIDATES = [
 ]
 _FONT_PATH: Optional[str] = next((f for f in _FONT_CANDIDATES if os.path.exists(f)), None)
 
-# Caption style — yellow text, black outline, dark pill bg (TikTok/Reels look)
-_CAPTION_COLOR = (255, 230, 0, 255)      # Bright yellow
-_OUTLINE_COLOR = (0, 0, 0, 255)          # Black outline
-_BG_COLOR = (0, 0, 0, 175)              # Semi-dark bg pill
-
-# Hook text style — larger, white, top of screen
-_HOOK_COLOR = (255, 255, 255, 255)
-_HOOK_FONT_SIZE = 72
+_OUTLINE_COLOR = (0, 0, 0, 255)
+_BG_COLOR = (0, 0, 0, 175)
+_HOOK_FONT_SIZE = 70
+_NAME_FONT_SIZE = 34
 
 
 # ── Pexels ────────────────────────────────────────────────────────────────────
@@ -61,14 +57,10 @@ def search_pexels_video(keywords: List[str]) -> Optional[str]:
             videos = resp.json().get("videos", [])
             if not videos:
                 continue
-            files = sorted(
-                videos[0]["video_files"],
-                key=lambda x: x.get("width", 0) or 0,
-                reverse=True,
-            )
+            files = sorted(videos[0]["video_files"], key=lambda x: x.get("width", 0) or 0, reverse=True)
             for vf in files:
                 if (vf.get("width") or 0) >= 720:
-                    logger.info(f"Pexels video found for '{kw}'")
+                    logger.info(f"Pexels video: '{kw}'")
                     return vf["link"]
             return files[0]["link"]
         except Exception as e:
@@ -83,14 +75,13 @@ def download_video(url: str, output_path: str) -> bool:
         with open(output_path, "wb") as f:
             for chunk in resp.iter_content(chunk_size=65536):
                 f.write(chunk)
-        logger.info(f"Downloaded: {output_path}")
         return True
     except Exception as e:
         logger.error(f"Download failed: {e}")
         return False
 
 
-# ── Video processing ──────────────────────────────────────────────────────────
+# ── Video resize ──────────────────────────────────────────────────────────────
 
 def _resize_to_portrait(clip: VideoFileClip) -> VideoFileClip:
     w, h = clip.size
@@ -102,7 +93,7 @@ def _resize_to_portrait(clip: VideoFileClip) -> VideoFileClip:
     return moviepy_crop(clip, x1=x1, y1=y1, x2=x1 + VIDEO_WIDTH, y2=y1 + VIDEO_HEIGHT)
 
 
-# ── Caption / hook image creation ─────────────────────────────────────────────
+# ── Text drawing helpers ──────────────────────────────────────────────────────
 
 def _load_font(size: int) -> ImageFont.ImageFont:
     if _FONT_PATH:
@@ -113,76 +104,94 @@ def _load_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _draw_outlined_text(draw, pos, text, font, fill, outline, outline_width=3):
+def _draw_outlined(draw, pos, text, font, fill, outline_width=3):
     x, y = pos
     for dx in range(-outline_width, outline_width + 1):
         for dy in range(-outline_width, outline_width + 1):
             if dx == 0 and dy == 0:
                 continue
-            draw.text((x + dx, y + dy), text, font=font, fill=outline)
+            draw.text((x + dx, y + dy), text, font=font, fill=_OUTLINE_COLOR)
     draw.text((x, y), text, font=font, fill=fill)
 
 
-def _create_caption_image(text: str) -> np.ndarray:
-    pad_x, pad_y, radius = 32, 16, 20
-    font = _load_font(CAPTION_FONT_SIZE)
+# ── Caption image ─────────────────────────────────────────────────────────────
 
-    img = Image.new("RGBA", (VIDEO_WIDTH, 180), (0, 0, 0, 0))
+def _create_caption_image(
+    text: str,
+    color: Tuple = (255, 230, 0, 255),
+    char_name: str = "",
+    emoji: str = "",
+) -> np.ndarray:
+    pad_x, pad_y, radius = 30, 14, 18
+    cap_font = _load_font(CAPTION_FONT_SIZE)
+    name_font = _load_font(_NAME_FONT_SIZE)
+
+    img_h = 210
+    img = Image.new("RGBA", (VIDEO_WIDTH, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    x = (VIDEO_WIDTH - tw) // 2
-    y = (180 - th) // 2
+    # Character name tag (small, above) — only for non-narrator
+    name_h = 0
+    if char_name and char_name != "NARRATOR" and emoji:
+        name_text = f"{emoji} {char_name}"
+        nb = draw.textbbox((0, 0), name_text, font=name_font)
+        nw, nh = nb[2] - nb[0], nb[3] - nb[1]
+        nx = (VIDEO_WIDTH - nw) // 2
+        draw.text((nx, 8), name_text, font=name_font, fill=color)
+        name_h = nh + 12
 
-    # Dark pill background
-    draw.rounded_rectangle(
-        [x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y],
-        radius=radius,
-        fill=_BG_COLOR,
-    )
-    _draw_outlined_text(draw, (x, y), text, font, fill=_CAPTION_COLOR, outline=_OUTLINE_COLOR)
+    # Main caption text
+    bbox = draw.textbbox((0, 0), text, font=cap_font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+    # Wrap if too wide
+    if tw > VIDEO_WIDTH - 60:
+        words = text.split()
+        mid = len(words) // 2
+        line1 = " ".join(words[:mid])
+        line2 = " ".join(words[mid:])
+        b1 = draw.textbbox((0, 0), line1, font=cap_font)
+        b2 = draw.textbbox((0, 0), line2, font=cap_font)
+        tw = max(b1[2] - b1[0], b2[2] - b2[0])
+        th = (b1[3] - b1[1]) + (b2[3] - b2[1]) + 6
+        x = (VIDEO_WIDTH - tw) // 2
+        y = name_h + 10
+        draw.rounded_rectangle([x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y], radius=radius, fill=_BG_COLOR)
+        _draw_outlined(draw, (x, y), line1, cap_font, fill=color)
+        y2 = y + (b1[3] - b1[1]) + 6
+        _draw_outlined(draw, (x, y2), line2, cap_font, fill=color)
+    else:
+        x = (VIDEO_WIDTH - tw) // 2
+        y = name_h + 10
+        draw.rounded_rectangle([x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y], radius=radius, fill=_BG_COLOR)
+        _draw_outlined(draw, (x, y), text, cap_font, fill=color)
+
     return np.array(img)
 
 
 def _create_hook_image(text: str) -> np.ndarray:
     pad_x, pad_y, radius = 36, 18, 22
     font = _load_font(_HOOK_FONT_SIZE)
-
     img = Image.new("RGBA", (VIDEO_WIDTH, 200), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-
-    # Wrap if too wide
     if tw > VIDEO_WIDTH - 80:
         words = text.split()
         mid = len(words) // 2
-        line1 = " ".join(words[:mid])
-        line2 = " ".join(words[mid:])
-        b1 = draw.textbbox((0, 0), line1, font=font)
-        b2 = draw.textbbox((0, 0), line2, font=font)
+        l1, l2 = " ".join(words[:mid]), " ".join(words[mid:])
+        b1 = draw.textbbox((0, 0), l1, font=font)
+        b2 = draw.textbbox((0, 0), l2, font=font)
         tw = max(b1[2] - b1[0], b2[2] - b2[0])
         th = (b1[3] - b1[1]) + (b2[3] - b2[1]) + 8
-        x = (VIDEO_WIDTH - tw) // 2
-        y = (200 - th) // 2
-        draw.rounded_rectangle(
-            [x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y],
-            radius=radius, fill=(220, 0, 0, 210),
-        )
-        _draw_outlined_text(draw, (x, y), line1, font, fill=_HOOK_COLOR, outline=_OUTLINE_COLOR)
-        y2 = y + (b1[3] - b1[1]) + 8
-        _draw_outlined_text(draw, (x, y2), line2, font, fill=_HOOK_COLOR, outline=_OUTLINE_COLOR)
+        x, y = (VIDEO_WIDTH - tw) // 2, (200 - th) // 2
+        draw.rounded_rectangle([x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y], radius=radius, fill=(200, 0, 0, 215))
+        _draw_outlined(draw, (x, y), l1, font, (255, 255, 255, 255))
+        _draw_outlined(draw, (x, y + b1[3] - b1[1] + 8), l2, font, (255, 255, 255, 255))
     else:
-        x = (VIDEO_WIDTH - tw) // 2
-        y = (200 - th) // 2
-        draw.rounded_rectangle(
-            [x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y],
-            radius=radius, fill=(220, 0, 0, 210),
-        )
-        _draw_outlined_text(draw, (x, y), text, font, fill=_HOOK_COLOR, outline=_OUTLINE_COLOR)
-
+        x, y = (VIDEO_WIDTH - tw) // 2, (200 - th) // 2
+        draw.rounded_rectangle([x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y], radius=radius, fill=(200, 0, 0, 215))
+        _draw_outlined(draw, (x, y), text, font, (255, 255, 255, 255))
     return np.array(img)
 
 
@@ -209,42 +218,39 @@ def build_video(
 
         video = video.subclip(0, duration).set_audio(audio)
 
-        # Subtle dark overlay — improves caption readability
-        overlay = (
-            ColorClip(size=(VIDEO_WIDTH, VIDEO_HEIGHT), color=[0, 0, 0])
-            .set_opacity(0.28)
-            .set_duration(duration)
-        )
+        # Slight dark overlay — better caption readability
+        overlay = ColorClip(size=(VIDEO_WIDTH, VIDEO_HEIGHT), color=[0, 0, 0]).set_opacity(0.3).set_duration(duration)
 
-        # Caption clips (yellow)
+        # Caption clips — each with its character's color
         caption_clips = []
         for cap in captions:
-            start, end = cap["start"], min(cap["end"], duration)
+            start = cap["start"]
+            end = min(cap.get("end", start + 2), duration)
             if start >= end:
                 continue
+            color = tuple(cap.get("color", (255, 230, 0, 255)))
+            char_name = cap.get("char", "")
+            emoji = cap.get("emoji", "")
+            img = _create_caption_image(cap["text"], color=color, char_name=char_name, emoji=emoji)
             clip = (
-                ImageClip(_create_caption_image(cap["text"]), ismask=False)
+                ImageClip(img, ismask=False)
                 .set_start(start)
                 .set_end(end)
                 .set_position((0, CAPTION_Y_POSITION))
             )
             caption_clips.append(clip)
 
-        # Hook text at top for first 3 seconds (red bg, white text)
+        # Hook text at top (red bg, white text) for first 3 sec
         if hook_text:
-            hook_dur = min(3.0, duration)
             hook_clip = (
                 ImageClip(_create_hook_image(hook_text), ismask=False)
                 .set_start(0)
-                .set_end(hook_dur)
+                .set_end(min(3.0, duration))
                 .set_position((0, 100))
             )
             caption_clips.insert(0, hook_clip)
 
-        final = CompositeVideoClip(
-            [video, overlay] + caption_clips,
-            size=(VIDEO_WIDTH, VIDEO_HEIGHT),
-        )
+        final = CompositeVideoClip([video, overlay] + caption_clips, size=(VIDEO_WIDTH, VIDEO_HEIGHT))
         final.write_videofile(
             output_path,
             fps=VIDEO_FPS,

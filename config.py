@@ -23,18 +23,43 @@ VIDEO_HEIGHT = 1920
 VIDEO_FPS = 30
 
 CAPTION_CHUNK_SIZE = 4
-CAPTION_FONT_SIZE = 68
-CAPTION_Y_POSITION = 1400
+CAPTION_FONT_SIZE = 66
+CAPTION_Y_POSITION = 1380
 
-# Rotating content categories — agent cycles through all of these
+# Two main characters — different voices, different caption colors
+CHARACTERS = {
+    "RAVI": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+22%",                          # Natural male speed
+        "caption_color": (255, 230, 0, 255),     # Yellow
+        "name_color": (255, 180, 0, 255),
+        "emoji": "👦",
+    },
+    "PRIYA": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "+18%",                          # Natural female speed
+        "caption_color": (100, 225, 255, 255),   # Cyan
+        "name_color": (255, 100, 200, 255),
+        "emoji": "👧",
+    },
+    "NARRATOR": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+12%",
+        "caption_color": (255, 255, 255, 255),   # White
+        "name_color": None,
+        "emoji": "",
+    },
+}
+
+# Rotating content categories
 CONTENT_CATEGORIES = [
-    "funny aur comedy — hasane wali funny situations aur jokes",
-    "prank videos — shocking reactions aur surprise moments",
-    "optical illusion aur brain tricks — dimaag ko chakkar dene wali visuals",
-    "loop video facts — jinhe baar baar dekhne ka dil kare (seamless loop concept)",
-    "amazing facts aur gyan — shocking sach jo log nahi jaante",
-    "science experiments — ghar par aasaani se karne wale experiments",
-    "kids entertainment — bacchon ke liye mazedar aur creative content",
-    "action aur fight stunts — thrilling aur exciting moments",
-    "motivational story — zindagi badalne wali short kahani",
+    "do dost ki funny conversation — ek unexpected twist ke saath jo end mein sabko surprise kare",
+    "prank gone wrong — jo prank karna tha woh ulta pad gaya karne wale pe hi",
+    "optical illusion reveal — ek cheez jo dikhti kuch hai, hoti kuch aur — shocking ending",
+    "real life loop situation — ek aisi galti jo baar baar hoti hai, jab tak samjha tab tak der ho gayi",
+    "shocking facts conversation — do log baat karte karte aisa fact batayein jo sunke aankh khuli reh jaye",
+    "science experiment twist — ghar pe kuch try karo, result bilkul unexpected nikle",
+    "kids vs parents funny — baccha parents ko hi ulta padhane lage, parents ke hosh ud jayein",
+    "dare gone wrong — koi stunt ya dare try kiya jo bilkul ulta ho gaya",
+    "motivational twist story — lagta hai haar jaayega, but last second mein aisa kuch ho jo sabko rula de",
 ]
