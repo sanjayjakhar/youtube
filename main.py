@@ -47,10 +47,23 @@ def run_pipeline(category: str = None) -> bool:
     topics = get_trending_topics()
     logger.info(f"      {len(topics)} topics mile")
 
-    # 2. Dialogue script generate
-    logger.info("[2/6] Multi-character Hindi script generate ho rahi hai...")
+    # 2. AI scene images — decides which characters appear in this video
+    logger.info("[2/6] AI cinematic scenes generate ho rahe hain (Pollinations.ai)...")
+    scene_result = generate_scene_images(
+        category=category,
+        chosen_topic="",      # topic not known yet; images generate first
+        work_dir=str(work_dir),
+        count=5,
+    )
+    scene_image_paths = scene_result.get("paths", [])
+    char1 = scene_result.get("char1", "HULK")
+    char2 = scene_result.get("char2", "REPORTER")
+    logger.info(f"      {len(scene_image_paths)} scenes | Characters: {char1} + {char2}")
+
+    # 3. Script — written FOR the characters shown in the images
+    logger.info(f"[3/6] {char1} + {char2} ka Hindi script generate ho raha hai...")
     try:
-        content = generate_video_content(topics, category)
+        content = generate_video_content(topics, category, char1=char1, char2=char2)
     except Exception as e:
         logger.error(f"Script fail: {e}")
         return False
@@ -64,14 +77,15 @@ def run_pipeline(category: str = None) -> bool:
         f"CATEGORY : {category}\n"
         f"TOPIC    : {content['chosen_topic']}\n"
         f"TITLE    : {content['title']}\n"
-        f"HOOK     : {content.get('hook_text', '')}\n\n"
+        f"HOOK     : {content.get('hook_text', '')}\n"
+        f"CHARS    : {char1} + {char2}\n\n"
         + "\n".join(f"[{d['char']}]: {d['text']}" for d in dialogue)
         + f"\n\nDESCRIPTION:\n{content['description']}\n\nTAGS: {', '.join(content['tags'])}",
         encoding="utf-8",
     )
 
-    # 3. Multi-character TTS
-    logger.info("[3/6] Multi-character voiceover ban rahi hai (RAVI + PRIYA)...")
+    # 4. TTS — each character speaks in their own voice
+    logger.info(f"[4/6] {char1} + {char2} ki voiceover ban rahi hai...")
     audio_path = str(work_dir / "narration.mp3")
     try:
         captions = generate_multi_char_tts(dialogue, audio_path)
@@ -81,25 +95,14 @@ def run_pipeline(category: str = None) -> bool:
 
     logger.info(f"      {len(captions)} caption chunks ready")
 
-    # 4. AI cinematic scene images (Avengers, superheroes, actors in Indian settings)
-    logger.info("[4/6] AI cinematic scenes generate ho rahe hain (Pollinations.ai)...")
-    scene_images = generate_scene_images(
-        category=category,
-        chosen_topic=content.get("chosen_topic", ""),
-        work_dir=str(work_dir),
-        count=5,
-    )
-
-    # 5. Build video
+    # 5. Build video — scene slideshow + voices + captions
     logger.info("[5/6] Video build ho raha hai...")
     final_video_path = str(work_dir / "final_short.mp4")
-
     video_built = False
 
-    if scene_images:
-        logger.info(f"      AI scene slideshow mode: {len(scene_images)} images")
+    if scene_image_paths:
         video_built = build_video_from_scenes(
-            scene_image_paths=scene_images,
+            scene_image_paths=scene_image_paths,
             audio_path=audio_path,
             captions=captions,
             output_path=final_video_path,
@@ -111,7 +114,7 @@ def run_pipeline(category: str = None) -> bool:
     if not video_built:
         logger.info("      Pexels stock footage fallback...")
         raw_video_path = str(work_dir / "raw_footage.mp4")
-        keywords = content.get("search_keywords", ["india street"])
+        keywords = content.get("search_keywords", ["superhero india"])
         video_url = search_pexels_video(keywords)
         if video_url and download_video(video_url, raw_video_path):
             video_built = build_video(

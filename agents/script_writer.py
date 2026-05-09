@@ -1,46 +1,65 @@
 import json
 import logging
-from typing import Dict
+from typing import Dict, List
 from groq import Groq
-from config import GROQ_API_KEY
+from config import GROQ_API_KEY, CHARACTERS
 
 logger = logging.getLogger(__name__)
 _MODEL = "llama-3.3-70b-versatile"
 
+# Human-readable descriptions for each character (for the LLM prompt)
+_CHAR_DESC = {
+    "HULK":          "Hulk — bahut powerful, simple bolta hai, 'Hulk' naam use karta hai khud ke liye, kabhi kabhi gussa",
+    "IRON_MAN":      "Iron Man (Tony Stark) — confident, smart, tech jokes karta hai, thoda arrogant",
+    "SPIDER_MAN":    "Spider-Man — energetic, funny, young, relatable, jokes karta hai serious situations mein bhi",
+    "THOR":          "Thor — dramatic, royal Asgardian style, 'Mjolnir' aur 'Asgard' mention karta hai",
+    "BLACK_PANTHER": "Black Panther — calm, wise, regal, thoughtful responses",
+    "DEADPOOL":      "Deadpool — hyper, breaks 4th wall, random jokes, completely unpredictable",
+    "LOKI":          "Loki — cunning, sarcastic, always has a hidden plan, dramatic",
+    "SHAKTIMAN":     "Shaktiman — Indian superhero style, values, moral lessons deta hai",
+    "REPORTER":      "Indian female news reporter — professional, curious, sharp questions poochti hai",
+    "REPORTER_M":    "Indian male news reporter — professional, excited, follow-up questions karta hai",
+    "ANCHOR":        "Indian female TV anchor — confident, dramatic delivery, breaking news style",
+    "SCIENTIST":     "Indian male scientist — excited about discovery, technical terms use karta hai",
+    "SCIENTIST_F":   "Indian female scientist — brilliant, passionate, research facts bolta hai",
+    "CHILD":         "Indian curious child — innocent questions, surprised easily, very enthusiastic",
+    "VILLAIN":       "Villain — menacing, slow speech, dramatic threats",
+    "PUBLIC":        "Indian common person — relatable, surprised, everyday language",
+    "NARRATOR":      "Narrator — sets the scene, max 12 words, neutral voice",
+}
 
-def generate_video_content(trending_topics: list, category: str) -> Dict:
+
+def generate_video_content(
+    trending_topics: List[str],
+    category: str,
+    char1: str = "HULK",
+    char2: str = "REPORTER",
+) -> Dict:
     client = Groq(api_key=GROQ_API_KEY)
     topics_str = "\n".join(f"- {t}" for t in trending_topics[:12])
 
-    # Category → character theme hint for the script
-    _CHAR_THEMES = {
-        "science": "Ek scientist ya superhero (Iron Man jaisa) kisi experiment ke baare mein baat kar raha ho",
-        "prank": "Koi prank ya stunt kar raha ho jo ulta pad jaye, Spiderman ya Loki style",
-        "facts": "Koi famous character ya superhero India mein interview de raha ho, shocking fact bataye",
-        "kids": "Superhero ya famous character bacchon se milta hai, dono ki baat hoti hai",
-        "dare": "Koi famous character ek dare karta hai jo fail ho jaata hai unexpectedly",
-        "motivational": "Superhero ya famous character kisi ko inspire karta hai, emotional ending",
-        "funny": "Famous character Indian culture mein confuse ho jaata hai, funny situation",
-        "loop": "Koi character ek situation mein baar baar phans jaata hai",
-        "optical illusion": "Reality mein kuch unexpected change ho jaata hai, characters shocked hain",
-    }
-    theme_hint = ""
-    for key, hint in _CHAR_THEMES.items():
-        if key in category.lower():
-            theme_hint = f"\nVISUAL THEME: {hint}"
-            break
+    c1_desc = _CHAR_DESC.get(char1, char1)
+    c2_desc = _CHAR_DESC.get(char2, char2)
+    c1_emoji = CHARACTERS.get(char1, {}).get("emoji", "")
+    c2_emoji = CHARACTERS.get(char2, {}).get("emoji", "")
 
     prompt = f"""Tu ek viral Hindi YouTube Shorts creator hai jo Indian audience ke liye content banata hai.
-Video mein AI-generated cinematic visuals honge — jaise Iron Man, Hulk, Spider-Man, ya koi superhero Indian setting mein.
 
-Content Category: {category}{theme_hint}
+Video mein AI-generated cinematic visuals honge — do characters jo SCREEN PE DIKHENGE aur KHUD bolenge:
+
+CHARACTER 1: {char1} {c1_emoji}
+  → {c1_desc}
+
+CHARACTER 2: {char2} {c2_emoji}
+  → {c2_desc}
+
+Content Category: {category}
 
 Trending topics (inme se koi ek choose kar ya apna topic laga jo category se match kare):
 {topics_str}
 
-DO CHARACTERS ke beech REAL conversation likho — RAVI (ladka) aur PRIYA (ladki).
-Yeh dono famous superhero ya fictional characters ke baare mein baat karte hain,
-ya khud koi superhero se connected hain, ya unhe koi ajeeb situation mein dekh rahe hain.
+IMPORTANT: {char1} aur {char2} directly ek doosre se baat karein — jaise vo screen pe saamne baithe hain.
+{char1} ki dialogue {char1} ki personality ke hisaab se ho. {char2} ki dialogue {char2} ki personality se.
 
 SIRF valid JSON return kar:
 
@@ -48,14 +67,12 @@ SIRF valid JSON return kar:
   "chosen_topic": "...",
   "title": "...",
   "hook_text": "...",
-  "char1": "RAVI",
-  "char2": "PRIYA",
   "dialogue": [
     {{"char": "NARRATOR", "text": "..."}},
-    {{"char": "RAVI", "text": "..."}},
-    {{"char": "PRIYA", "text": "..."}},
-    {{"char": "RAVI", "text": "..."}},
-    {{"char": "PRIYA", "text": "..."}}
+    {{"char": "{char2}", "text": "..."}},
+    {{"char": "{char1}", "text": "..."}},
+    {{"char": "{char2}", "text": "..."}},
+    {{"char": "{char1}", "text": "..."}}
   ],
   "description": "...",
   "tags": ["...", "...", "...", "...", "...", "...", "...", "...", "...", "..."],
@@ -64,16 +81,18 @@ SIRF valid JSON return kar:
 
 STRICT RULES:
 - title: emoji se shuru, 65 chars se kam, end mein " #Shorts", Hindi/Hinglish mein
-- hook_text: 4-6 CAPITAL words jo curiosity jagaayein (jaise "HULK KA INTERVIEW 😱" ya "IRON MAN NE KIYA KUCH AISA")
-- dialogue: exactly 15-18 lines total, NARRATOR se start karo
-  * NARRATOR: ek baar context set kare (max 12 words), superhero/character ka mention karo
-  * Phir RAVI aur PRIYA ki natural Hindi baat-cheet — superhero/character ke baare mein
-  * Har line: 8-14 words, jaise real log baat karte hain
-  * End se 3rd line pe UNEXPECTED TWIST aaye — shocking ya funny
-  * Last line: "Aisa content dekhna hai? Abhi follow kar le!"
+  * Example: "💚 HULK KA PEHLA INTERVIEW! #Shorts" ya "🕷️ SPIDER-MAN PAKDA GAYA! #Shorts"
+- hook_text: 4-6 CAPITAL words with emoji (jaise "{char1.replace('_',' ')} NE KUCH AUR HI BOLA 😱")
+- dialogue: exactly 15-18 lines total
+  * Line 1: NARRATOR — scene set kare in max 12 words (e.g. "Aaj {char2} ne {char1} ka interview liya")
+  * Baaki lines: {char1} aur {char2} ki DIRECT baat-cheet — seedha ek doosre se
+  * Har line: 8-14 words, natural spoken Hindi
+  * End se 3rd line pe UNEXPECTED TWIST aaye — shocking ya funny moment
+  * Last line ({char2} ya {char1} bolein): "Aisa content dekhna hai? Abhi follow kar le!"
+- Each character must speak in their OWN style (upar described)
 - description: 180-220 chars, Hindi summary + #shorts #viral #trending #india #hindi
-- tags: 10 tags — include superhero/character names + trending Indian tags
-- search_keywords: 2-3 English words describing the visual scene (e.g. "hulk india interview", "iron man lab")
+- tags: 10 tags — character names + trending Indian tags
+- search_keywords: 2-3 English words for scene visuals
 - BILKUL NO asterisk, brackets, ya bullet points in dialogue text
 """
 
@@ -82,7 +101,7 @@ STRICT RULES:
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
         temperature=0.92,
-        max_tokens=1500,
+        max_tokens=1600,
     )
 
     data = json.loads(response.choices[0].message.content)
@@ -96,10 +115,15 @@ STRICT RULES:
             desc += f" {tag}"
     data["description"] = desc.strip()[:500]
 
-    dialogue = data.get("dialogue", [])
+    # Ensure only valid chars appear in dialogue
+    allowed = {char1, char2, "NARRATOR"}
+    dialogue = [d for d in data.get("dialogue", []) if d.get("char") in allowed]
+    data["dialogue"] = dialogue
+
     logger.info(f"Category : {category[:45]}")
     logger.info(f"Topic    : {data.get('chosen_topic')}")
     logger.info(f"Title    : {data.get('title')}")
     logger.info(f"Hook     : {data.get('hook_text')}")
+    logger.info(f"Chars    : {char1} + {char2}")
     logger.info(f"Dialogue : {len(dialogue)} lines")
     return data

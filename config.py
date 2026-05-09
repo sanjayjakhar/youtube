@@ -26,27 +26,117 @@ CAPTION_CHUNK_SIZE = 4
 CAPTION_FONT_SIZE = 66
 CAPTION_Y_POSITION = 1380
 
-# Two main characters — different voices, different caption colors
+# ── Character voice configs ───────────────────────────────────────────────────
+# Each entry: voice, rate (edge-tts speed), caption_color (RGBA), emoji
+# Male   Hindi voice: hi-IN-MadhurNeural
+# Female Hindi voice: hi-IN-SwaraNeural
+# Rate tweak = the only way to differentiate characters with free edge-tts
+
 CHARACTERS = {
-    "RAVI": {
+    # ── Superheroes (male, deep/powerful = slower rate) ──
+    "HULK": {
         "voice": "hi-IN-MadhurNeural",
-        "rate": "+22%",                          # Natural male speed
-        "caption_color": (255, 230, 0, 255),     # Yellow
-        "name_color": (255, 180, 0, 255),
-        "emoji": "👦",
+        "rate": "-18%",                            # slow + heavy
+        "caption_color": (50, 230, 50, 255),       # green
+        "emoji": "💚",
     },
-    "PRIYA": {
+    "IRON_MAN": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+20%",                            # fast + confident
+        "caption_color": (255, 120, 0, 255),       # orange-red
+        "emoji": "🦾",
+    },
+    "SPIDER_MAN": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+30%",                            # quick + energetic
+        "caption_color": (220, 30, 30, 255),       # red
+        "emoji": "🕷️",
+    },
+    "THOR": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "-8%",                             # authoritative
+        "caption_color": (80, 130, 255, 255),      # blue
+        "emoji": "⚡",
+    },
+    "BLACK_PANTHER": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "-5%",                             # calm + regal
+        "caption_color": (180, 80, 255, 255),      # purple
+        "emoji": "🐾",
+    },
+    "DEADPOOL": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+38%",                            # hyper + fast
+        "caption_color": (255, 10, 10, 255),       # bright red
+        "emoji": "💀",
+    },
+    "LOKI": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+5%",                             # smooth + cunning
+        "caption_color": (0, 180, 100, 255),       # teal-green
+        "emoji": "🐍",
+    },
+    "SHAKTIMAN": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+10%",
+        "caption_color": (255, 200, 0, 255),       # golden
+        "emoji": "⭐",
+    },
+    # ── Reporters / interviewers (female = professional) ──
+    "REPORTER": {
         "voice": "hi-IN-SwaraNeural",
-        "rate": "+18%",                          # Natural female speed
-        "caption_color": (100, 225, 255, 255),   # Cyan
-        "name_color": (255, 100, 200, 255),
+        "rate": "+8%",
+        "caption_color": (255, 230, 80, 255),      # yellow
+        "emoji": "🎤",
+    },
+    "REPORTER_M": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+12%",
+        "caption_color": (255, 230, 80, 255),
+        "emoji": "🎙️",
+    },
+    "ANCHOR": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "+6%",
+        "caption_color": (255, 180, 50, 255),
+        "emoji": "📺",
+    },
+    # ── Other characters ──
+    "SCIENTIST": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+18%",
+        "caption_color": (100, 210, 255, 255),     # light blue
+        "emoji": "🔬",
+    },
+    "SCIENTIST_F": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "+15%",
+        "caption_color": (100, 210, 255, 255),
+        "emoji": "👩‍🔬",
+    },
+    "CHILD": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "+45%",                            # fast + childlike
+        "caption_color": (255, 160, 220, 255),     # pink
         "emoji": "👧",
     },
+    "VILLAIN": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "-28%",                            # menacing slow
+        "caption_color": (180, 0, 0, 255),         # dark red
+        "emoji": "😈",
+    },
+    "PUBLIC": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "+22%",
+        "caption_color": (200, 200, 200, 255),     # grey
+        "emoji": "👥",
+    },
+    # ── Narrator (no label shown) ──
     "NARRATOR": {
         "voice": "hi-IN-MadhurNeural",
         "rate": "+12%",
-        "caption_color": (255, 255, 255, 255),   # White
-        "name_color": None,
+        "caption_color": (255, 255, 255, 255),     # white
         "emoji": "",
     },
 }

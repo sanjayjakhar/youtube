@@ -3,7 +3,7 @@ import time
 import logging
 import random
 import urllib.parse
-from typing import List, Optional
+from typing import List, Dict, Tuple
 
 import requests
 
@@ -11,103 +11,230 @@ logger = logging.getLogger(__name__)
 
 POLLINATIONS_BASE = "https://image.pollinations.ai/prompt"
 
-# Cinematic scene templates per category — Indian viral Shorts style
-# Each entry = a full SCENE (characters + action + setting)
+# Each scene entry: (image_prompt, [char1, char2])
+# char names must exist in config.CHARACTERS
 _SCENE_LIBRARY = {
+    "facts": [
+        (
+            "Hulk sitting in Indian news studio being interviewed by female reporter with microphone, "
+            "breaking news banner, dramatic studio lighting, both characters visible, cinematic 9:16",
+            ["HULK", "REPORTER"],
+        ),
+        (
+            "Iron Man in suit at India press conference, journalist with mic asking questions, "
+            "Indian reporters crowd, cinematic dramatic lighting, 9:16 vertical",
+            ["IRON_MAN", "REPORTER"],
+        ),
+        (
+            "Thor with hammer sitting across Indian news anchor in TV studio, "
+            "both clearly visible, professional news set, cinematic 9:16",
+            ["THOR", "ANCHOR"],
+        ),
+        (
+            "Black Panther in Indian news interview, female anchor with mic, "
+            "Mumbai skyline visible through studio window, cinematic 9:16",
+            ["BLACK_PANTHER", "REPORTER"],
+        ),
+        (
+            "Spider-Man perched on chair in Indian TV studio, excited anchor interviewing him, "
+            "live cameras visible, cinematic 9:16 vertical",
+            ["SPIDER_MAN", "ANCHOR"],
+        ),
+    ],
     "science": [
-        "Iron Man in a secret lab in Mumbai doing dangerous experiment, explosion of colorful chemicals, cinematic dramatic lighting, 9:16 vertical",
-        "Dr Strange and Iron Man discovering shocking science fact in Indian laboratory, magical energy swirling, cinematic",
-        "Hulk accidentally breaking science experiment in Indian school lab, kids shocked, funny cinematic scene",
-        "two Indian scientists in futuristic lab finding unexpected result, epic reaction faces, cinematic 9:16",
-        "Thor using lightning to power science experiment in India, shocked reporters watching, cinematic",
+        (
+            "Iron Man and Indian female scientist in futuristic Mumbai lab, "
+            "colorful chemical explosion between them, both reacting shocked, cinematic 9:16",
+            ["IRON_MAN", "SCIENTIST_F"],
+        ),
+        (
+            "Hulk accidentally smashing science lab equipment, Indian scientist watching in horror, "
+            "colorful chemical reactions, dramatic cinematic 9:16",
+            ["HULK", "SCIENTIST"],
+        ),
+        (
+            "Spider-Man and Indian scientist discovering glowing experiment result, "
+            "both amazed, futuristic lab background, cinematic 9:16",
+            ["SPIDER_MAN", "SCIENTIST_F"],
+        ),
+        (
+            "Thor using lightning to power giant science machine, Indian scientist taking notes, "
+            "epic energy effects, cinematic 9:16",
+            ["THOR", "SCIENTIST"],
+        ),
     ],
     "prank": [
-        "Loki doing a prank on Thor in Indian street market, crowd laughing, cinematic 9:16 vertical",
-        "Spider-Man prank gone wrong in Mumbai bazaar, shopkeeper shocked, viral shorts style cinematic",
-        "Deadpool pranking Indian public on street, everyone shocked and laughing, cinematic scene",
-        "funny cartoon monkey in hoodie pulling prank in Indian chai shop, shocked faces, vibrant cinematic",
-        "Iron Man suit malfunction prank in India, crowd reaction, dramatic cinematic style",
-    ],
-    "optical illusion": [
-        "Doctor Strange creating mind-bending optical illusion in India, reality bending, cinematic 9:16",
-        "Wanda Maximoff warping reality in Indian city, people confused and shocked, epic cinematic",
-        "surreal optical illusion scene in Indian street, people questioning reality, vibrant dramatic",
-        "Strange portal revealing impossible scene to Indian crowd, jaw dropping moment, cinematic",
+        (
+            "Loki pulling a prank on Thor in busy Indian street market, Thor looks shocked and confused, "
+            "Indian crowd laughing in background, vibrant cinematic 9:16",
+            ["LOKI", "THOR"],
+        ),
+        (
+            "Deadpool pranking Spider-Man in Mumbai, Spider-Man completely surprised, "
+            "both visible face to face, funny vibrant scene, cinematic 9:16",
+            ["DEADPOOL", "SPIDER_MAN"],
+        ),
+        (
+            "Iron Man suit malfunction prank by Deadpool, Iron Man embarrassed, "
+            "Indian public watching and laughing, cinematic 9:16",
+            ["DEADPOOL", "IRON_MAN"],
+        ),
+        (
+            "Loki disguised as Indian shopkeeper pranks an unsuspecting Thor, "
+            "funny reveal scene, Indian bazaar background, cinematic 9:16",
+            ["LOKI", "THOR"],
+        ),
     ],
     "loop": [
-        "Deadpool stuck in a funny time loop in India, same moment repeating, comic style cinematic",
-        "Iron Man experiencing groundhog day in Indian office, confused expression, cinematic",
-        "Spider-Man in repeating loop situation in Mumbai, frustrated expression, funny cinematic",
+        (
+            "Spider-Man and Deadpool stuck in the same funny situation repeating, "
+            "time loop visual effect, confused expressions, Indian city background, cinematic 9:16",
+            ["SPIDER_MAN", "DEADPOOL"],
+        ),
+        (
+            "Iron Man experiencing time loop in Indian traffic jam, same moment repeating, "
+            "funny frustrated expression, cinematic comic style 9:16",
+            ["IRON_MAN", "REPORTER"],
+        ),
+        (
+            "Loki and Thor in repeating loop in Indian office, confused and frustrated, "
+            "same desk visible multiple times, cinematic 9:16",
+            ["LOKI", "THOR"],
+        ),
     ],
-    "facts": [
-        "Hulk being interviewed by Indian news reporter on live TV, breaking news studio, cinematic 9:16",
-        "Thor explaining shocking facts to Indian journalist with mic, newsroom background, dramatic",
-        "Iron Man press conference in India revealing shocking fact, reporters shocked, cinematic",
-        "Black Panther being interviewed by Indian anchor, african king meets Indian media, cinematic",
-        "Avengers giving shocking interview to Indian news channel, studio lighting, dramatic cinematic",
+    "optical illusion": [
+        (
+            "Doctor Strange creating mind-bending optical illusion in Indian city, "
+            "Iron Man watching in disbelief, reality bending swirling colors, cinematic 9:16",
+            ["LOKI", "IRON_MAN"],
+        ),
+        (
+            "Loki using magic to create impossible optical illusion, Thor questioning reality, "
+            "surreal colorful Indian street background, cinematic 9:16",
+            ["LOKI", "THOR"],
+        ),
     ],
     "kids": [
-        "Spider-Man teaching kids in Indian school, children amazed and happy, heartwarming cinematic",
-        "Iron Man visiting Indian children hospital, tiny kids in awe, emotional cinematic scene",
-        "Hulk gently playing with Indian kids in park, funny wholesome scene, vibrant cinematic",
-        "Thor babysitting Indian kids who ask too many questions, funny cinematic 9:16",
-        "Avengers heroes at Indian school, kids interviewing superheroes, vibrant joyful cinematic",
+        (
+            "Spider-Man sitting with Indian school children in classroom, kids amazed and raising hands, "
+            "colorful classroom setting, heartwarming cinematic 9:16",
+            ["SPIDER_MAN", "CHILD"],
+        ),
+        (
+            "Hulk gently sitting with tiny Indian child who is interviewing him with toy mic, "
+            "funny wholesome scene, park background, cinematic 9:16",
+            ["HULK", "CHILD"],
+        ),
+        (
+            "Thor kneeling to talk with Indian child who is asking big questions, "
+            "child pointing at Mjolnir, funny wholesome, cinematic 9:16",
+            ["THOR", "CHILD"],
+        ),
+        (
+            "Iron Man explaining technology to group of Indian school children, "
+            "kids in awe touching the suit, school background, cinematic 9:16",
+            ["IRON_MAN", "CHILD"],
+        ),
     ],
     "dare": [
-        "Deadpool attempting impossible dare in India that goes completely wrong, cinematic 9:16",
-        "Iron Man accepting a dare from Indian public that backfires hilariously, crowd reaction",
-        "Spider-Man doing extreme dare stunt in Mumbai that fails unexpectedly, cinematic",
-        "Thor accepting dare from Indian kids, unexpected result, funny dramatic cinematic",
+        (
+            "Deadpool attempting impossible dare stunt in India that goes completely wrong, "
+            "Spider-Man watching and facepalming, Indian crowd, cinematic 9:16",
+            ["DEADPOOL", "SPIDER_MAN"],
+        ),
+        (
+            "Thor accepting dare from Deadpool that backfires hilariously, "
+            "both looking at the result in shock, Indian setting, cinematic 9:16",
+            ["THOR", "DEADPOOL"],
+        ),
+        (
+            "Iron Man accepting impossible dare from Deadpool, "
+            "dramatic fail result, Indian public reacting, cinematic 9:16",
+            ["DEADPOOL", "IRON_MAN"],
+        ),
     ],
     "motivational": [
-        "Iron Man giving emotional motivational speech to Indian crowd in stadium, cinematic 9:16",
-        "Black Panther inspiring Indian youth, epic speech scene, dramatic lighting cinematic",
-        "Thor standing with Indian hero, both looking at sunset over Mumbai, inspiring cinematic",
-        "Avengers rallying Indian public after setback, emotional powerful scene, cinematic",
-        "Spider-Man saving Indian family from danger, heartwarming hero moment, cinematic",
+        (
+            "Black Panther giving powerful speech to Indian crowd in stadium, "
+            "Iron Man standing beside him, epic golden hour lighting, cinematic 9:16",
+            ["BLACK_PANTHER", "IRON_MAN"],
+        ),
+        (
+            "Thor encouraging defeated Indian hero to get up, emotional powerful scene, "
+            "storm clouds parting with light, cinematic 9:16",
+            ["THOR", "REPORTER"],
+        ),
+        (
+            "Spider-Man saving Indian family from danger, family looking up at him gratefully, "
+            "emotional heartwarming scene, cinematic 9:16",
+            ["SPIDER_MAN", "PUBLIC"],
+        ),
+        (
+            "Iron Man giving final motivational speech before mission, "
+            "Indian soldiers listening, epic dramatic lighting, cinematic 9:16",
+            ["IRON_MAN", "PUBLIC"],
+        ),
     ],
     "funny": [
-        "Hulk confused at Indian wedding traditions, awkward funny moment, cinematic 9:16",
-        "Thor trying to eat spicy Indian food for first time, dramatic reaction, funny cinematic",
-        "Iron Man stuck in Indian traffic jam, frustrated, relatable funny cinematic",
-        "Deadpool doing Indian street food challenge, hilarious reaction, vibrant cinematic",
-        "Avengers at Indian family dinner, chaos and confusion, funny cinematic scene",
+        (
+            "Hulk confused and embarrassed at Indian wedding, trying to fit in small chair, "
+            "wedding guests shocked, colorful shaadi background, cinematic 9:16",
+            ["HULK", "REPORTER"],
+        ),
+        (
+            "Thor eating extremely spicy Indian food for first time, dramatic suffering reaction, "
+            "Indian chef watching proudly, vibrant dhaba background, cinematic 9:16",
+            ["THOR", "PUBLIC"],
+        ),
+        (
+            "Deadpool stuck in Indian bureaucracy office, hilarious frustrated argument "
+            "with babu clerk, funny dramatic scene, cinematic 9:16",
+            ["DEADPOOL", "PUBLIC"],
+        ),
+        (
+            "Iron Man at Indian family dinner table completely confused by the chaos, "
+            "Indian family arguing around him, funny cinematic 9:16",
+            ["IRON_MAN", "REPORTER"],
+        ),
     ],
 }
 
 _DEFAULT_SCENES = [
-    "Hulk and Iron Man having intense argument in Indian setting, dramatic cinematic 9:16",
-    "Spider-Man surprised by something shocking in India, jaw drop moment, cinematic",
-    "Thor reacting to unexpected twist in Indian city, dramatic cinematic scene",
-    "Iron Man interview with Indian reporter going wrong, cinematic viral shorts style",
-    "Avengers discussing shocking discovery in Mumbai, dramatic lighting cinematic 9:16",
+    (
+        "Hulk and Iron Man having intense face-to-face argument in Indian city street, "
+        "both looking at each other dramatically, cinematic 9:16",
+        ["HULK", "IRON_MAN"],
+    ),
+    (
+        "Spider-Man being interviewed by Indian reporter after saving Mumbai, "
+        "both visible clearly, cinematic 9:16",
+        ["SPIDER_MAN", "REPORTER"],
+    ),
+    (
+        "Thor and Deadpool in argument in Indian market, funny dramatic confrontation, "
+        "cinematic 9:16",
+        ["THOR", "DEADPOOL"],
+    ),
 ]
 
 
-def _get_scene_pool(category: str) -> List[str]:
+def _get_scene_pool(category: str) -> List[Tuple]:
     for key, scenes in _SCENE_LIBRARY.items():
         if key in category.lower():
             return scenes
     return _DEFAULT_SCENES
 
 
-def _build_prompt(base_scene: str, topic_hint: str) -> str:
-    topic_part = f", topic: {topic_hint[:50]}" if topic_hint else ""
-    return (
-        f"{base_scene}{topic_part}, "
-        f"ultra detailed, high quality render, vibrant colors, "
+def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
+    full_prompt = (
+        f"{prompt}, ultra detailed, high quality render, vibrant colors, "
         f"YouTube Shorts viral style, no text overlay, no watermark, "
         f"portrait 9:16 vertical composition"
     )
+    encoded = urllib.parse.quote(full_prompt)
+    url = f"{POLLINATIONS_BASE}/{encoded}?width=1080&height=1920&nologo=true&seed={seed}"
 
-
-def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
-    encoded = urllib.parse.quote(prompt)
-    url = (
-        f"{POLLINATIONS_BASE}/{encoded}"
-        f"?width=1080&height=1920&nologo=true&seed={seed}"
-    )
-    wait_times = [30, 60, 90]  # retry backoff — gives Pollinations.ai time to reset
+    wait_times = [30, 60, 90]
     for attempt, wait in enumerate(wait_times + [None], 1):
         try:
             resp = requests.get(url, timeout=120, stream=True)
@@ -116,16 +243,15 @@ def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
                     logger.info(f"Rate limited — waiting {wait}s before retry {attempt + 1}")
                     time.sleep(wait)
                     continue
-                else:
-                    logger.warning("Rate limited — giving up on this image")
-                    return False
+                logger.warning("Rate limited — giving up on this image")
+                return False
             resp.raise_for_status()
             with open(output_path, "wb") as f:
                 for chunk in resp.iter_content(65536):
                     f.write(chunk)
             size = os.path.getsize(output_path)
             if size < 8000:
-                logger.warning(f"Image suspiciously small ({size}B) — skipping")
+                logger.warning(f"Image too small ({size}B) — skipping")
                 return False
             logger.info(f"Scene image: {os.path.basename(output_path)} ({size // 1024}KB)")
             return True
@@ -134,7 +260,7 @@ def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
                 logger.warning(f"Attempt {attempt} failed ({e}) — retrying in {wait}s")
                 time.sleep(wait)
             else:
-                logger.error(f"Image download failed after retries: {e}")
+                logger.error(f"Image download failed: {e}")
                 return False
     return False
 
@@ -144,29 +270,46 @@ def generate_scene_images(
     chosen_topic: str,
     work_dir: str,
     count: int = 5,
-) -> List[str]:
+) -> Dict:
     """
-    Generate `count` cinematic scene images for the video slideshow.
-    Returns list of successfully downloaded image file paths.
+    Generate cinematic scene images for the video.
+    Returns: {"paths": [...], "char1": "HULK", "char2": "REPORTER"}
+    All images use the SAME character pair for consistency.
     """
     pool = _get_scene_pool(category)
 
-    # Shuffle so each video looks different
     seed_base = int(time.time()) % 99999
     random.seed(seed_base)
-    selected = random.sample(pool, min(count, len(pool)))
-    if len(selected) < count:
-        # Pad with default scenes if pool is small
-        extras = random.sample(_DEFAULT_SCENES, count - len(selected))
-        selected += extras
+
+    # Pick one scene entry to fix the character pair for this video
+    primary = random.choice(pool)
+    primary_prompt, chars = primary
+
+    # Find all scenes with same character pair, pad with variations if needed
+    same_char_scenes = [s for s in pool if set(s[1]) == set(chars)]
+    if len(same_char_scenes) < count:
+        same_char_scenes = pool  # fallback: use all
+
+    selected_prompts = random.sample(
+        same_char_scenes, min(count, len(same_char_scenes))
+    )
+    # Pad to count if needed
+    while len(selected_prompts) < count:
+        selected_prompts.append(random.choice(same_char_scenes))
 
     paths = []
-    for i, base_scene in enumerate(selected):
-        prompt = _build_prompt(base_scene, chosen_topic)
+    for i, (scene_prompt, _) in enumerate(selected_prompts):
+        topic_hint = f", about: {chosen_topic[:50]}" if chosen_topic else ""
+        full = scene_prompt + topic_hint
         out_path = os.path.join(work_dir, f"scene_{i:02d}.jpg")
-        if _download_image(prompt, out_path, seed=seed_base + i):
+        if _download_image(full, out_path, seed=seed_base + i):
             paths.append(out_path)
-        time.sleep(3)  # rate limit gap between images
+        time.sleep(3)
 
-    logger.info(f"Generated {len(paths)}/{count} scene images for category: {category[:40]}")
-    return paths
+    char1 = chars[0] if len(chars) > 0 else "HULK"
+    char2 = chars[1] if len(chars) > 1 else "REPORTER"
+
+    logger.info(
+        f"Scenes: {len(paths)}/{count} images | Characters: {char1} + {char2}"
+    )
+    return {"paths": paths, "char1": char1, "char2": char2}
