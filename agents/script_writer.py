@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Dict, List
 from groq import Groq
-from config import GROQ_API_KEY, CHARACTERS
+from config import GROQ_API_KEY, CHARACTERS, SITUATION_CATEGORIES
 
 logger = logging.getLogger(__name__)
 _MODEL = "llama-3.3-70b-versatile"
@@ -51,7 +51,66 @@ def generate_video_content(
     c1_emoji = CHARACTERS.get(char1, {}).get("emoji", "")
     c2_emoji = CHARACTERS.get(char2, {}).get("emoji", "")
 
-    prompt = f"""Tu ek viral Hindi YouTube Shorts creator hai jo Indian audience ke liye content banata hai.
+    is_situation = category.lower() in SITUATION_CATEGORIES
+
+    if is_situation:
+        prompt = f"""Tu ek viral Hindi YouTube Shorts creator hai jo Indian audience ke liye content banata hai.
+
+Video mein DRAMATIC REAL-LOOKING cinematic visuals honge — koi superhero nahi, bas ek chaotic situation.
+
+FORMAT: LIVE NEWS COVERAGE STYLE
+- {char1} {c1_emoji} = TV studio mein anchor, calm aur professional
+- {char2} {c2_emoji} = FIELD REPORTER — literally scene pe hai, chaos mein hai, wind/flood/fire/crowd ke beech
+
+Content Category: {category}
+Trending topics:
+{topics_str}
+
+Is category ke liye aisa scene choose karo:
+- natural disaster: forest fire, flood, tornado, earthquake
+- funny viral: log ud rahe hain tez hawa mein, cheezein ud rahi hain, absurd funny events
+- weather chaos: aandhi, tufan, barish, extreme heat
+- crowd chaos: log bhaag rahe hain, janwar bazaar mein, baraat ne traffic rok li, flash mob gone wrong
+
+Script style: ANCHOR studio se poochh raha/rahi hai, REPORTER field se report kar raha/rahi hai aur genuinely PHASE HUA/HUI hai.
+Beech mein kuch ajeeb/funny twist zaroor aaye. REPORTER ka connection baar baar toot sakta hai.
+
+SIRF valid JSON return kar:
+
+{{
+  "chosen_topic": "...",
+  "title": "...",
+  "hook_text": "...",
+  "dialogue": [
+    {{"char": "NARRATOR", "text": "..."}},
+    {{"char": "{char1}", "text": "..."}},
+    {{"char": "{char2}", "text": "..."}},
+    {{"char": "{char1}", "text": "..."}},
+    {{"char": "{char2}", "text": "..."}}
+  ],
+  "description": "...",
+  "tags": ["...", "...", "...", "...", "...", "...", "...", "...", "...", "..."],
+  "search_keywords": ["...", "...", "..."]
+}}
+
+STRICT RULES:
+- title: emoji se shuru, 65 chars se kam, end mein " #Shorts", Hindi mein — situation describe kare
+  * Example: "🌪️ REPORTER TORNADO MEI GHUS GAYI! #Shorts" ya "🌊 FLOOD MEI LIVE REPORT! #Shorts"
+- hook_text: 4-6 CAPITAL shocking words with emoji (jaise "REPORTER KO HAWA NE UDAYA 😱")
+- dialogue: exactly 15-18 lines total
+  * Line 1: NARRATOR — dramatic scene set kare max 12 words
+  * Anchor studio se questions kare, reporter field se chaos describe kare
+  * Har line: 8-14 words, natural spoken Hindi
+  * Beech mein REPORTER kuch funny/unexpected bol de ya connection toot jaaye
+  * End se 3rd line pe SHOCKING TWIST — kuch aur bhi ho jaata hai
+  * Last line: "Aisa content dekhna hai? Abhi follow kar le!"
+- description: 180-220 chars, situation describe karo + #shorts #viral #trending #india #hindi
+- tags: 10 tags — situation + viral Indian tags
+- search_keywords: 2-3 English words for visuals (e.g. "tornado reporter india")
+- BILKUL NO asterisk, brackets, ya bullet points in dialogue text
+"""
+    else:
+        prompt = f"""Tu ek viral Hindi YouTube Shorts creator hai jo Indian audience ke liye content banata hai.
 
 Video mein AI-generated cinematic visuals honge — do characters jo SCREEN PE DIKHENGE aur KHUD bolenge:
 

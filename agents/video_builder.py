@@ -259,7 +259,7 @@ def build_video(
             temp_audiofile=output_path + ".temp.aac",
             remove_temp=True,
             logger=None,
-            threads=4,
+            threads=2,
         )
         logger.info(f"Video built: {output_path}")
         return True
@@ -445,13 +445,20 @@ def build_video_from_scenes(
             temp_audiofile=output_path + ".temp.aac",
             remove_temp=True,
             logger=None,
-            threads=4,
+            threads=2,
         )
         logger.info(f"Scene slideshow video built: {output_path}")
         return True
 
     except Exception as e:
         logger.error(f"Scene video build failed: {e}", exc_info=True)
+        # Check if ffmpeg actually wrote the file before the exception
+        try:
+            if os.path.getsize(output_path) > 500_000:
+                logger.warning("write_videofile raised but file looks complete — returning True")
+                return True
+        except OSError:
+            pass
         return False
 
     finally:
@@ -599,13 +606,19 @@ def build_video_from_did_clips(
             output_path, fps=VIDEO_FPS, codec="libx264",
             audio_codec="aac",
             temp_audiofile=output_path + ".temp.aac",
-            remove_temp=True, logger=None, threads=4,
+            remove_temp=True, logger=None, threads=2,
         )
         logger.info(f"D-ID talking video built: {output_path}")
         return True
 
     except Exception as e:
         logger.error(f"D-ID video build failed: {e}", exc_info=True)
+        try:
+            if os.path.getsize(output_path) > 500_000:
+                logger.warning("write_videofile raised but file looks complete — returning True")
+                return True
+        except OSError:
+            pass
         return False
 
     finally:

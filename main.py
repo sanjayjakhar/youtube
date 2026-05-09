@@ -194,6 +194,16 @@ def run_pipeline(category: str = None) -> bool:
                 hook_text=content.get("hook_text", ""),
             )
 
+    # Crash-recovery: ffmpeg child process can finish the file even if Python was OOM-killed
+    if not video_built:
+        try:
+            file_size = os.path.getsize(final_video_path)
+            if file_size > 500_000:
+                logger.warning(f"Build returned False but file exists ({file_size//1024}KB) — treating as success")
+                video_built = True
+        except OSError:
+            pass
+
     if not video_built:
         logger.error("Build fail — both scene and Pexels paths failed")
         return False

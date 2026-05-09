@@ -207,4 +207,13 @@ CONTENT_CATEGORIES = [
     "teacher",
     "police",
     "facts",
+    "natural disaster",
+    "funny viral",
+    "weather chaos",
+    "crowd chaos",
 ]
+
+# Categories that use dramatic situation visuals (no fixed superhero characters)
+SITUATION_CATEGORIES = {
+    "natural disaster", "funny viral", "weather chaos", "crowd chaos"
+}

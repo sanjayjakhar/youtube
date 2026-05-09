@@ -301,6 +301,119 @@ _SCENE_LIBRARY = {
             ["POLICE", "SHARMA_JI"],
         ),
     ],
+    "natural disaster": [
+        (
+            "Indian female reporter doing live broadcast as massive forest fire rages behind her, "
+            "flames and smoke filling the sky, reporter clutching mic desperately, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian TV reporter standing knee-deep in flood water during live broadcast, "
+            "water current pulling things past her, dramatic urgent reporting, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Massive tornado approaching Indian village, reporter barely holding on to fence, "
+            "debris flying everywhere, terrified dramatic live coverage, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian reporter covering volcanic eruption live, lava glowing in background, "
+            "ash falling like snow, reporter in hard hat looking stunned, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian news reporter at earthquake site, buildings crumbling behind her, "
+            "ground cracking, dramatic rescue scene in background, urgent live coverage, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+    ],
+    "funny viral": [
+        (
+            "Crowd of Indian people getting launched into the air by freak gust of wind, "
+            "expressions of pure shock and laughter, market scene, funny cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Indian man's motorcycle getting swept away by flash flood while he stands watching helplessly, "
+            "funny shocked face, bystanders filming on phones, cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Massive dust devil picking up an entire chai stall and spinning it, "
+            "chai wala chasing his cups flying through air, Indian street, funny cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Extreme wind blowing away wedding shamiyana while bride and groom look shocked, "
+            "guests running and laughing, flowers flying everywhere, funny cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian man opens umbrella and immediately gets lifted off ground Superman-style, "
+            "floating above street while people below point and laugh, funny cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Giant hailstorm pelting Indian cricket match, players running in all directions, "
+            "umpire standing calmly with umbrella, funny chaotic cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+    ],
+    "weather chaos": [
+        (
+            "Massive Indian aandhi dust storm engulfing entire city, cars and trees bending, "
+            "people running holding clothes, dramatic apocalyptic cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Extreme monsoon flooding Indian street, cars floating, people on rooftops, "
+            "dramatic urgent rescue in progress, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Dense fog covering Indian highway, trucks appearing like ghosts, "
+            "reporter standing in eerie mist barely visible, dramatic cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian city during record-breaking heatwave, roads melting, eggs frying on pavement, "
+            "reporter dramatically showing thermometer reading extreme temperature, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Freak lightning storm lighting up entire Indian city skyline, "
+            "reporter doing live coverage as lightning strikes dramatically nearby, cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+    ],
+    "crowd chaos": [
+        (
+            "Massive Indian crowd suddenly running in all directions from something offscreen, "
+            "market chaos, things flying, dramatic cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Huge crowd of Indian people chasing a single runaway cow through city streets, "
+            "comically determined faces, rickshaws dodging, funny cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Flash mob in Indian mall goes hilariously wrong, crowd confused and joining in anyway, "
+            "security guards dancing accidentally, funny chaotic cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+        (
+            "Giant monkey stealing people's bags in Shimla market while tourists chase it helplessly, "
+            "monkey sitting on roof looking smug, funny cinematic 9:16",
+            ["ANCHOR", "REPORTER"],
+        ),
+        (
+            "Indian wedding baraat stops all traffic in city, groom dancing on horse, "
+            "stuck cars honking, everyone eventually joining the dance, funny cinematic 9:16",
+            ["ANCHOR", "PUBLIC"],
+        ),
+    ],
 }
 
 _DEFAULT_SCENES = [
@@ -386,14 +499,14 @@ def _download_image(prompt: str, output_path: str, seed: int = 42) -> bool:
 
 # ── Per-character portrait prompts for D-ID lip sync ─────────────────────────
 _CHAR_PORTRAIT = {
-    "HULK":          "Hulk green face extreme close-up, powerful angry expression, dramatic studio lighting, no background clutter, cinematic portrait 9:16",
-    "IRON_MAN":      "Iron Man helmet close-up, glowing eyes, red gold suit, dramatic lighting, cinematic portrait 9:16",
-    "SPIDER_MAN":    "Spider-Man mask close-up, expressive pose, dramatic red blue suit, cinematic portrait 9:16",
+    "HULK":          "Hulk green muscular face close-up, angry powerful expression, green skin, dramatic lighting, human face visible clearly, cinematic portrait 9:16",
+    "IRON_MAN":      "Tony Stark handsome face close-up, without helmet, confident smirk, strong jaw, cinematic portrait 9:16",
+    "SPIDER_MAN":    "Peter Parker young handsome face close-up, no mask, surprised expression, cinematic portrait 9:16",
     "THOR":          "Thor face close-up, long blond hair, powerful expression, lightning in background, cinematic portrait 9:16",
-    "BLACK_PANTHER": "Black Panther mask close-up, vibranium suit, regal expression, purple glow, cinematic portrait 9:16",
-    "DEADPOOL":      "Deadpool red mask close-up, tilted head funny pose, chaotic energy, cinematic portrait 9:16",
-    "LOKI":          "Loki face close-up, horned helmet, cunning smirk, green gold outfit, cinematic portrait 9:16",
-    "SHAKTIMAN":     "Shaktiman Indian superhero face close-up, gold suit, heroic expression, cinematic portrait 9:16",
+    "BLACK_PANTHER": "T'Challa handsome African face close-up, no mask, regal king expression, cinematic portrait 9:16",
+    "DEADPOOL":      "Ryan Reynolds handsome face close-up, sarcastic smirk, no mask, cinematic portrait 9:16",
+    "LOKI":          "Loki face close-up, dark hair, cunning smirk, green gold outfit, no helmet, cinematic portrait 9:16",
+    "SHAKTIMAN":     "Indian superhero Shaktiman face close-up, heroic expression, cinematic portrait 9:16",
     "REPORTER":      "Indian female news reporter close-up portrait, professional blazer, holding microphone, studio lighting, cinematic 9:16",
     "REPORTER_M":    "Indian male news reporter close-up portrait, professional suit, holding microphone, studio lighting, cinematic 9:16",
     "ANCHOR":        "Indian female TV anchor close-up portrait, professional makeup, confident expression, studio backdrop, cinematic 9:16",
