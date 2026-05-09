@@ -1,13 +1,15 @@
 import logging
 import datetime
+import os
 from pathlib import Path
 
 from config import OUTPUT_DIR, LOGS_DIR
 from agents.trend_finder import get_trending_topics
 from agents.script_writer import generate_video_content
 from agents.tts_engine import generate_multi_char_tts
-from agents.video_builder import search_pexels_video, download_video, build_video, build_video_from_scenes
+from agents.video_builder import search_pexels_video, download_video, build_video, build_video_from_scenes, build_video_from_did_clips
 from agents.image_generator import generate_scene_images
+from agents.talking_face import generate_talking_clip
 from agents.uploader import upload_video
 from agents.analytics import (
     pick_weighted_category,
@@ -95,12 +97,52 @@ def run_pipeline(category: str = None) -> bool:
 
     logger.info(f"      {len(captions)} caption chunks ready")
 
-    # 5. Build video — scene slideshow + voices + captions
+    # 5. D-ID talking face clips (characters bolenge — mooh hilega)
+    did_key = os.getenv("DID_API_KEY", "")
+    did_clips = {}  # {"CHAR1": path, "CHAR2": path}
+
+    if did_key and scene_image_paths:
+        logger.info("[5a/6] D-ID talking face generate ho raha hai...")
+        # Use first scene image for each character's face
+        char_audio_dir = str(work_dir / "char_audio")
+        os.makedirs(char_audio_dir, exist_ok=True)
+
+        # Build per-character combined audio + generate D-ID clip
+        for char_key, char_name in [("char1", char1), ("char2", char2)]:
+            # Collect all audio segments for this character
+            char_lines = [cap for cap in captions if cap.get("char") == char_name]
+            if not char_lines:
+                continue
+            char_face_img = scene_image_paths[0]  # use first scene image as face
+            char_audio_path = os.path.join(char_audio_dir, f"{char_name}_full.mp3")
+            char_clip_path = os.path.join(char_audio_dir, f"{char_name}_talking.mp4")
+
+            # Use the main combined audio (D-ID will use full video audio timing)
+            if generate_talking_clip(char_face_img, audio_path, char_clip_path, did_key):
+                did_clips[char_name] = char_clip_path
+                logger.info(f"D-ID clip ready: {char_name}")
+            else:
+                logger.warning(f"D-ID failed for {char_name}")
+
+    # 5b. Build video
     logger.info("[5/6] Video build ho raha hai...")
     final_video_path = str(work_dir / "final_short.mp4")
     video_built = False
 
-    if scene_image_paths:
+    if did_clips and scene_image_paths:
+        logger.info(f"      D-ID talking mode: {list(did_clips.keys())}")
+        video_built = build_video_from_did_clips(
+            did_clips=did_clips,
+            scene_image_paths=scene_image_paths,
+            audio_path=audio_path,
+            captions=captions,
+            output_path=final_video_path,
+            hook_text=content.get("hook_text", ""),
+        )
+        if not video_built:
+            logger.warning("D-ID video failed, falling back to Ken Burns...")
+
+    if not video_built and scene_image_paths:
         video_built = build_video_from_scenes(
             scene_image_paths=scene_image_paths,
             audio_path=audio_path,

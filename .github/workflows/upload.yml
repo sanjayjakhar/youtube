@@ -36,6 +36,8 @@ jobs:
           printf '%s\n' \
             "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" \
             "PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}" \
+            "ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }}" \
+            "DID_API_KEY=${{ secrets.DID_API_KEY }}" \
             "CONTENT_NICHE=Hindi entertainment - funny, prank, facts, science, kids, illusion" \
             "TTS_VOICE=hi-IN-MadhurNeural" \
             "UPLOAD_TIMES=09:00,21:00" > .env

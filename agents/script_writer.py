@@ -26,6 +26,14 @@ _CHAR_DESC = {
     "VILLAIN":       "Villain — menacing, slow speech, dramatic threats",
     "PUBLIC":        "Indian common person — relatable, surprised, everyday language",
     "NARRATOR":      "Narrator — sets the scene, max 12 words, neutral voice",
+    "CRICKETER":     "Indian cricketer — passionate about cricket, energetic, uses cricket metaphors",
+    "CHEF":          "Indian chef — very proud of food, dramatic about cooking, uses food metaphors",
+    "TEACHER":       "Indian teacher — authoritative, asks questions back, old-school style",
+    "POLICE":        "Indian police officer — serious, by-the-book, suspicious of everything",
+    "GHOST":         "Ghost — dramatic, lonely, gets confused by modern India",
+    "ROBOT":         "Robot — very literal, confused by human emotions, speaks in instructions",
+    "DADI":          "Indian grandma — wisdom with humor, old-school values, calls everyone beta",
+    "SHARMA_JI":     "Sharma Ji neighbor — extremely nosy, compares everything to his son, Hindi colony uncle",
 }
 
 

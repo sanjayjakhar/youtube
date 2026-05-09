@@ -197,6 +197,110 @@ _SCENE_LIBRARY = {
             ["IRON_MAN", "REPORTER"],
         ),
     ],
+    "cricket": [
+        (
+            "Indian cricketer celebrating massive six at packed stadium, "
+            "commentator screaming in excitement, crowd going wild, cinematic 9:16",
+            ["CRICKETER", "REPORTER"],
+        ),
+        (
+            "Indian cricketer and reporter doing dramatic post-match interview, "
+            "stadium lights behind them, emotional intense moment, cinematic 9:16",
+            ["CRICKETER", "ANCHOR"],
+        ),
+        (
+            "Indian police officer stopping Indian cricketer for speeding in luxury car, "
+            "cricketer trying to explain, funny confrontation, cinematic 9:16",
+            ["CRICKETER", "POLICE"],
+        ),
+    ],
+    "ghost": [
+        (
+            "Terrified Indian person encountering friendly ghost in old haveli, "
+            "ghost trying to have a conversation, dramatic candlelit scene, cinematic 9:16",
+            ["GHOST", "PUBLIC"],
+        ),
+        (
+            "Ghost sitting with Indian grandma having chai in dark haunted house, "
+            "grandma completely unbothered, ghost shocked, funny horror scene, cinematic 9:16",
+            ["GHOST", "DADI"],
+        ),
+        (
+            "Ghost appearing in Indian police station, officer trying to file complaint about ghost, "
+            "hilarious bureaucracy meets supernatural, cinematic 9:16",
+            ["GHOST", "POLICE"],
+        ),
+    ],
+    "dadi": [
+        (
+            "Indian grandma expertly using smartphone better than tech-savvy grandson, "
+            "grandson shocked, cozy home setting, funny cinematic 9:16",
+            ["DADI", "CHILD"],
+        ),
+        (
+            "Indian grandma teaching robot how to make roti, robot failing hilariously, "
+            "warm kitchen setting, funny wholesome cinematic 9:16",
+            ["DADI", "ROBOT"],
+        ),
+        (
+            "Indian grandma arguing with Sharma Ji neighbor over garden fence, "
+            "both being dramatic, classic Indian neighborhood, cinematic 9:16",
+            ["DADI", "SHARMA_JI"],
+        ),
+    ],
+    "sharma ji": [
+        (
+            "Sharma Ji gossiping with neighbor aunty about everyone on the street, "
+            "nosy over-the-fence conversation, Indian colony setting, cinematic 9:16",
+            ["SHARMA_JI", "PUBLIC"],
+        ),
+        (
+            "Sharma Ji proudly comparing his son's achievements to everyone, "
+            "neighbour trying to escape conversation, funny Indian neighborhood, cinematic 9:16",
+            ["SHARMA_JI", "PUBLIC"],
+        ),
+    ],
+    "robot": [
+        (
+            "Indian family teaching confused robot to eat with hands and speak Hindi, "
+            "robot malfunctioning hilariously, colorful living room, cinematic 9:16",
+            ["ROBOT", "PUBLIC"],
+        ),
+        (
+            "Robot applying for government job at Indian government office, "
+            "confused babu officer questioning it, funny bureaucracy scene, cinematic 9:16",
+            ["ROBOT", "POLICE"],
+        ),
+    ],
+    "teacher": [
+        (
+            "Indian teacher caught off guard when student asks unexpectedly brilliant question, "
+            "classroom full of students watching, dramatic moment, cinematic 9:16",
+            ["TEACHER", "CHILD"],
+        ),
+        (
+            "Indian teacher discovering student using AI to write homework, "
+            "epic confrontation at classroom blackboard, cinematic 9:16",
+            ["TEACHER", "CHILD"],
+        ),
+    ],
+    "police": [
+        (
+            "Indian police officer trying to arrest Loki who keeps shapeshifting, "
+            "frustrated officer filing paperwork, cinematic action 9:16",
+            ["POLICE", "LOKI"],
+        ),
+        (
+            "Indian police officer stopping Deadpool who is just casually breaking all the rules, "
+            "hilarious argument, city background, cinematic 9:16",
+            ["POLICE", "DEADPOOL"],
+        ),
+        (
+            "Indian police officer and Sharma Ji having dramatic confrontation in colony, "
+            "neighbors watching, very Indian drama, cinematic 9:16",
+            ["POLICE", "SHARMA_JI"],
+        ),
+    ],
 }
 
 _DEFAULT_SCENES = [
@@ -214,6 +318,21 @@ _DEFAULT_SCENES = [
         "Thor and Deadpool in argument in Indian market, funny dramatic confrontation, "
         "cinematic 9:16",
         ["THOR", "DEADPOOL"],
+    ),
+    (
+        "Indian grandma and robot having chai together in traditional kitchen, "
+        "funny confused robot, warm cinematic 9:16",
+        ["DADI", "ROBOT"],
+    ),
+    (
+        "Ghost and Indian police officer in dramatic staredown at police station, "
+        "ghost files complaint, funny cinematic 9:16",
+        ["GHOST", "POLICE"],
+    ),
+    (
+        "Sharma Ji neighbor lecturing Indian cricketer about lifestyle, "
+        "cricketer trying to escape politely, colony gate, cinematic 9:16",
+        ["SHARMA_JI", "CRICKETER"],
     ),
 ]
 

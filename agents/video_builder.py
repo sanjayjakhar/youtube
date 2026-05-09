@@ -464,3 +464,148 @@ def build_video_from_scenes(
         if final:
             try: final.close()
             except Exception: pass
+
+
+# ── D-ID talking face video build ────────────────────────────────────────────
+
+def build_video_from_did_clips(
+    did_clips: Dict[str, str],          # {"HULK": path_to_talking_video, ...}
+    scene_image_paths: List[str],
+    audio_path: str,
+    captions: List[Dict],
+    output_path: str,
+    hook_text: str = "",
+) -> bool:
+    """
+    Build video using D-ID talking clips as background.
+    When a character speaks → show their D-ID talking video.
+    Otherwise → Ken Burns scene image.
+    """
+    if not did_clips:
+        return False
+
+    audio = final = None
+    open_clips = []
+
+    try:
+        audio = AudioFileClip(audio_path)
+        duration = audio.duration
+
+        # Pre-load D-ID clips (loop them if shorter than duration)
+        did_video_clips = {}
+        for char, clip_path in did_clips.items():
+            try:
+                vc = VideoFileClip(clip_path, audio=False)
+                did_video_clips[char] = vc
+                open_clips.append(vc)
+            except Exception as e:
+                logger.warning(f"D-ID clip load failed for {char}: {e}")
+
+        # Build background: switch between D-ID clip and Ken Burns per caption
+        bg_clips = []
+        kb_directions = [0, 1, 2, 3, 0]
+        scene_idx = 0
+
+        def _kb_clip(start, end):
+            nonlocal scene_idx
+            img = scene_image_paths[scene_idx % len(scene_image_paths)]
+            scene_idx += 1
+            dur = max(0.1, end - start)
+            c = _make_ken_burns_clip(img, dur, direction=kb_directions[scene_idx % len(kb_directions)])
+            if c:
+                return c.set_start(start)
+            return None
+
+        # Group captions into continuous segments by character
+        i = 0
+        while i < len(captions):
+            cap = captions[i]
+            char = cap.get("char", "")
+            seg_start = cap["start"]
+            # Extend segment as long as same character
+            j = i + 1
+            while j < len(captions) and captions[j].get("char") == char:
+                j += 1
+            seg_end = min(captions[j - 1].get("end", seg_start + 2), duration)
+
+            if char in did_video_clips:
+                vc = did_video_clips[char]
+                seg_dur = max(0.1, seg_end - seg_start)
+                # Loop D-ID clip if needed
+                if vc.duration < seg_dur:
+                    loops = int(seg_dur / vc.duration) + 2
+                    from moviepy.editor import concatenate_videoclips
+                    vc_looped = concatenate_videoclips([vc] * loops)
+                    clip = vc_looped.subclip(0, seg_dur).set_start(seg_start)
+                    open_clips.append(vc_looped)
+                else:
+                    clip = vc.subclip(0, seg_dur).set_start(seg_start)
+                clip = _resize_to_portrait(clip) if clip.size != (VIDEO_WIDTH, VIDEO_HEIGHT) else clip
+                bg_clips.append(clip)
+                open_clips.append(clip)
+            else:
+                kbc = _kb_clip(seg_start, seg_end)
+                if kbc:
+                    bg_clips.append(kbc)
+                    open_clips.append(kbc)
+            i = j
+
+        if not bg_clips:
+            logger.error("No background clips built")
+            return False
+
+        overlay = (
+            ColorClip(size=(VIDEO_WIDTH, VIDEO_HEIGHT), color=[0, 0, 0])
+            .set_opacity(0.22)
+            .set_duration(duration)
+        )
+
+        caption_clips = []
+        for cap in captions:
+            start = cap["start"]
+            end = min(cap.get("end", start + 2), duration)
+            if start >= end:
+                continue
+            color = tuple(cap.get("color", (255, 230, 0, 255)))
+            img = _create_caption_image(cap["text"], color=color,
+                                        char_name=cap.get("char", ""),
+                                        emoji=cap.get("emoji", ""))
+            clip = (ImageClip(img, ismask=False)
+                    .set_start(start).set_end(end)
+                    .set_position((0, CAPTION_Y_POSITION)))
+            caption_clips.append(clip)
+            open_clips.append(clip)
+
+        if hook_text:
+            hc = (ImageClip(_create_hook_image(hook_text), ismask=False)
+                  .set_start(0).set_end(min(3.5, duration))
+                  .set_position((0, 100)))
+            caption_clips.insert(0, hc)
+            open_clips.append(hc)
+
+        final = CompositeVideoClip(bg_clips + [overlay] + caption_clips,
+                                   size=(VIDEO_WIDTH, VIDEO_HEIGHT))
+        final = final.set_audio(audio)
+        final.write_videofile(
+            output_path, fps=VIDEO_FPS, codec="libx264",
+            audio_codec="aac",
+            temp_audiofile=output_path + ".temp.aac",
+            remove_temp=True, logger=None, threads=4,
+        )
+        logger.info(f"D-ID talking video built: {output_path}")
+        return True
+
+    except Exception as e:
+        logger.error(f"D-ID video build failed: {e}", exc_info=True)
+        return False
+
+    finally:
+        for c in open_clips:
+            try: c.close()
+            except Exception: pass
+        if audio:
+            try: audio.close()
+            except Exception: pass
+        if final:
+            try: final.close()
+            except Exception: pass

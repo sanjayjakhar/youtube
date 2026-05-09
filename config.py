@@ -132,6 +132,55 @@ CHARACTERS = {
         "caption_color": (200, 200, 200, 255),     # grey
         "emoji": "👥",
     },
+    # ── Real-world Indian characters ──
+    "CRICKETER": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+25%",                            # passionate, energetic
+        "caption_color": (0, 180, 80, 255),        # cricket green
+        "emoji": "🏏",
+    },
+    "CHEF": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+20%",                            # enthusiastic
+        "caption_color": (255, 165, 0, 255),       # saffron
+        "emoji": "👨‍🍳",
+    },
+    "TEACHER": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+5%",                             # authoritative calm
+        "caption_color": (150, 200, 255, 255),     # light blue
+        "emoji": "📚",
+    },
+    "POLICE": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "-5%",                             # serious, firm
+        "caption_color": (50, 100, 200, 255),      # police blue
+        "emoji": "👮",
+    },
+    "GHOST": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "-35%",                            # eerie, slow
+        "caption_color": (200, 220, 255, 255),     # pale blue
+        "emoji": "👻",
+    },
+    "ROBOT": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+0%",                             # flat, mechanical
+        "caption_color": (180, 255, 220, 255),     # mint
+        "emoji": "🤖",
+    },
+    "DADI": {
+        "voice": "hi-IN-SwaraNeural",
+        "rate": "-20%",                            # slow, elderly grandma
+        "caption_color": (255, 200, 150, 255),     # warm peach
+        "emoji": "👵",
+    },
+    "SHARMA_JI": {
+        "voice": "hi-IN-MadhurNeural",
+        "rate": "+15%",                            # nosy neighbor trope
+        "caption_color": (220, 180, 80, 255),      # mustard
+        "emoji": "🤦",
+    },
     # ── Narrator (no label shown) ──
     "NARRATOR": {
         "voice": "hi-IN-MadhurNeural",
@@ -143,13 +192,19 @@ CHARACTERS = {
 
 # Rotating content categories
 CONTENT_CATEGORIES = [
-    "do dost ki funny conversation — ek unexpected twist ke saath jo end mein sabko surprise kare",
-    "prank gone wrong — jo prank karna tha woh ulta pad gaya karne wale pe hi",
-    "optical illusion reveal — ek cheez jo dikhti kuch hai, hoti kuch aur — shocking ending",
-    "real life loop situation — ek aisi galti jo baar baar hoti hai, jab tak samjha tab tak der ho gayi",
-    "shocking facts conversation — do log baat karte karte aisa fact batayein jo sunke aankh khuli reh jaye",
-    "science experiment twist — ghar pe kuch try karo, result bilkul unexpected nikle",
-    "kids vs parents funny — baccha parents ko hi ulta padhane lage, parents ke hosh ud jayein",
-    "dare gone wrong — koi stunt ya dare try kiya jo bilkul ulta ho gaya",
-    "motivational twist story — lagta hai haar jaayega, but last second mein aisa kuch ho jo sabko rula de",
+    "funny",
+    "prank",
+    "science",
+    "kids",
+    "optical illusion",
+    "dare",
+    "motivational",
+    "ghost",
+    "dadi",
+    "sharma ji",
+    "robot",
+    "cricket",
+    "teacher",
+    "police",
+    "facts",
 ]
