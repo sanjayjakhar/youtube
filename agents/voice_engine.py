@@ -70,6 +70,9 @@ def generate_elevenlabs_audio(text: str, char_name: str, output_path: str, api_k
                 },
                 timeout=60,
             )
+            if resp.status_code == 401:
+                logger.warning("ElevenLabs 401 — invalid API key, skipping ElevenLabs")
+                return False
             if resp.status_code == 429:
                 wait = (attempt + 1) * 10
                 logger.warning(f"ElevenLabs rate limited — waiting {wait}s")
@@ -86,7 +89,7 @@ def generate_elevenlabs_audio(text: str, char_name: str, output_path: str, api_k
             return True
         except Exception as e:
             logger.warning(f"ElevenLabs attempt {attempt+1} failed: {e}")
-            time.sleep(5)
+            time.sleep(2)
     return False
 
 
@@ -98,12 +101,22 @@ def check_quota(api_key: str) -> dict:
             headers={"xi-api-key": api_key},
             timeout=10,
         )
-        data = resp.json()
-        used = data.get("character_count", 0)
-        limit = data.get("character_limit", 10000)
-        remaining = limit - used
-        logger.info(f"ElevenLabs quota: {remaining}/{limit} chars remaining")
-        return {"remaining": remaining, "limit": limit, "ok": remaining > 100}
+        if resp.status_code == 200:
+            data = resp.json()
+            used = data.get("character_count", 0)
+            limit = data.get("character_limit", 10000)
+            remaining = limit - used
+            logger.info(f"ElevenLabs quota: {remaining}/{limit} chars remaining")
+            return {"remaining": remaining, "limit": limit, "ok": remaining > 100}
+        # 401 with missing_permissions = restricted key (TTS-only) — still works for audio
+        if resp.status_code == 401:
+            detail = resp.json().get("detail", {})
+            if isinstance(detail, dict) and "missing_permissions" in detail.get("status", ""):
+                logger.info("ElevenLabs key is TTS-only (no quota read) — assuming ok")
+                return {"remaining": 9999, "limit": 10000, "ok": True}
+            logger.warning("ElevenLabs API key invalid (401)")
+            return {"remaining": 0, "limit": 0, "ok": False}
+        return {"remaining": 9999, "limit": 10000, "ok": True}
     except Exception as e:
         logger.warning(f"Could not check ElevenLabs quota: {e}")
         return {"remaining": 9999, "limit": 10000, "ok": True}
