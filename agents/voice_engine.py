@@ -70,8 +70,8 @@ def generate_elevenlabs_audio(text: str, char_name: str, output_path: str, api_k
                 },
                 timeout=60,
             )
-            if resp.status_code == 401:
-                logger.warning("ElevenLabs 401 — invalid API key, skipping ElevenLabs")
+            if resp.status_code in (401, 402):
+                logger.warning(f"ElevenLabs {resp.status_code} — quota/auth issue, skipping ElevenLabs")
                 return False
             if resp.status_code == 429:
                 wait = (attempt + 1) * 10
